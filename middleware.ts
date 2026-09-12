@@ -31,11 +31,16 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // เปลี่ยนมาเช็ก session แทน getUser เพื่อความชัวร์ใน Middleware
+  const { data: { session } } = await supabase.auth.getSession()
 
-  // ถ้ายังไม่ล็อกอิน และไม่ใช่หน้า /auth ให้ดีดไปหน้า /auth ทันที
-  if (!user && !request.nextUrl.pathname.startsWith('/auth')) {
-    return NextResponse.redirect(new URL('/auth', request.url))
+  const pathname = request.nextUrl.pathname
+
+  // ถ้าไม่มี session (ยังไม่ล็อกอิน) และไม่ใช่หน้า /auth ให้ดีดไป /auth ทันที
+  if (!session && !pathname.startsWith('/auth')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth'
+    return NextResponse.redirect(url)
   }
 
   return response
