@@ -1,49 +1,29 @@
-import { type NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-
-  // เปลี่ยนมาเช็ก session แทน getUser เพื่อความชัวร์ใน Middleware
-  const { data: { session } } = await supabase.auth.getSession()
-
-  const pathname = request.nextUrl.pathname
-
-  // ถ้าไม่มี session (ยังไม่ล็อกอิน) และไม่ใช่หน้า /auth ให้ดีดไป /auth ทันที
-  if (!session && !pathname.startsWith('/auth')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth'
-    return NextResponse.redirect(url)
+  // ข้ามไฟล์ระบบและหน้า auth
+  if (
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.includes('.')
+  ) {
+    return NextResponse.next()
   }
 
-  return response
+  // เช็กคุกกี้ที่ขึ้นต้นด้วย sb- (คุ้กกี้ล็อกอินของ Supabase)
+  const allCookies = request.cookies.getAll()
+  const hasSupabaseSession = allCookies.some(cookie => cookie.name.startsWith('sb-') && cookie.name.includes('-auth-token'))
+
+  // ถ้ายังไม่ล็อกอิน ให้ดีดไปหน้า /auth ทันที
+  if (!hasSupabaseSession) {
+    return NextResponse.redirect(new URL('/auth', request.url))
+  }
+
+  return NextResponse.next()
 }
 
 export const config = {
