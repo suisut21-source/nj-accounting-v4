@@ -2,8 +2,10 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
   })
 
   const supabase = createServerClient(
@@ -16,36 +18,27 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
           })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            response.cookies.set(name, value, options)
           )
         },
       },
     }
   )
 
-  // ดึงข้อมูลผู้ใช้ปัจจุบัน
   const { data: { user } } = await supabase.auth.getUser()
 
-  const pathname = request.nextUrl.pathname
-
-  // ถ้ายังไม่ล็อกอิน และพยายามเข้าหน้าอื่นที่ไม่ใช่ /auth หรือไฟล์ระบบ ให้ดีดไป /auth ทันที
-  if (
-    !user &&
-    !pathname.startsWith('/auth') &&
-    !pathname.startsWith('/_next') &&
-    !pathname.startsWith('/api') &&
-    pathname !== '/favicon.ico'
-  ) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth'
-    return NextResponse.redirect(url)
+  // ถ้ายังไม่ล็อกอิน และไม่ใช่หน้า /auth ให้ดีดไปหน้า /auth ทันที
+  if (!user && !request.nextUrl.pathname.startsWith('/auth')) {
+    return NextResponse.redirect(new URL('/auth', request.url))
   }
 
-  return supabaseResponse
+  return response
 }
 
 export const config = {
