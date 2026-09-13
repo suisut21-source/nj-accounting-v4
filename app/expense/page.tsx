@@ -342,20 +342,24 @@ export default function ExpensePage() {
                 <label className="text-xs sm:text-sm font-black text-slate-700 flex items-center gap-2 uppercase tracking-wider">
                   📸 แนบรูปใบเสร็จ / บิล 🧾
                 </label>
-                <div className="border-2 border-dashed border-slate-200 hover:border-rose-400 bg-slate-50/50 rounded-2xl p-6 text-center transition cursor-pointer relative flex-1 flex flex-col items-center justify-center min-h-[160px]">
+                
+                <label className="border-2 border-dashed border-slate-200 hover:border-rose-400 bg-slate-50/50 rounded-2xl p-6 text-center transition cursor-pointer relative flex-1 flex flex-col items-center justify-center min-h-[160px] block">
                   <input 
                     type="file" 
                     accept="image/*" 
+                    capture="environment"
                     onChange={handleImageChange}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-15"
+                    className="hidden"
                   />
                   {formData.receiptImage ? (
-                    <div className="space-y-3 relative z-0">
+                    <div className="space-y-3">
                       <img src={formData.receiptImage} alt="Receipt Preview" className="max-h-48 mx-auto rounded-2xl shadow-sm border border-slate-200 object-contain" />
-                      <p className="text-xs font-bold text-rose-600">แตะเพื่อเปลี่ยนรูปภาพใหม่ 🔄</p>
+                      <span className="inline-block px-3 py-1 bg-rose-100 text-rose-700 rounded-full text-xs font-bold">
+                        📸 บันทึกรูปบิลเรียบร้อย (แตะเพื่อเปลี่ยนรูปใหม่) 🔄
+                      </span>
                     </div>
                   ) : (
-                    <div className="space-y-2 relative z-0">
+                    <div className="space-y-2 pointer-events-none">
                       <div className="w-12 h-12 mx-auto rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 shadow-xs">
                         <Camera className="w-6 h-6 text-rose-500" />
                       </div>
@@ -363,7 +367,7 @@ export default function ExpensePage() {
                       <p className="text-[11px] text-slate-400 font-medium">หลักฐานสำคัญสำหรับหักลดหย่อนภาษี</p>
                     </div>
                   )}
-                </div>
+                </label>
               </div>
 
             </div>

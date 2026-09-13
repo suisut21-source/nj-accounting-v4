@@ -226,20 +226,16 @@ export default function InvoicesPage() {
     printWindow.document.close();
   };
 
-  // ฟังก์ชันลบใบเสร็จ พร้อมลบยอดเงินในหน้ารายงานและกระเป๋าเงินออกอัตโนมัติ
   const deleteInvoice = (targetInv: Invoice) => {
     if (confirm(`คุณต้องการลบใบเสร็จเลขที่ ${targetInv.id} ใช่หรือไม่? (ยอดเงินจะถูกหักออกจากหน้ารายงานและกระเป๋าเงินอัตโนมัติ)`)) {
-      // 1. ลบออกจากรายการใบเสร็จ
       const updatedInvoices = invoices.filter(inv => inv.id !== targetInv.id);
       setInvoices(updatedInvoices);
       localStorage.setItem('invoicesList', JSON.stringify(updatedInvoices));
 
-      // 2. ลบรายการที่ตรงกันออกจากหน้ารายงาน (incomeTransactions) โดยเทียบจากหมายเลขใบเสร็จใน note
       const existingIncome = JSON.parse(localStorage.getItem('incomeTransactions') || '[]');
       const filteredIncome = existingIncome.filter((inc: any) => !inc.note?.includes(targetInv.id));
       localStorage.setItem('incomeTransactions', JSON.stringify(filteredIncome));
 
-      // 3. ลบรายการที่ตรงกันออกจากหน้ากระเป๋าเงิน (walletTransactions) โดยเทียบจากหมายเลขใบเสร็จใน note
       const walletHistory = JSON.parse(localStorage.getItem('walletTransactions') || '[]');
       const filteredWallet = walletHistory.filter((wal: any) => !wal.note?.includes(targetInv.id));
       localStorage.setItem('walletTransactions', JSON.stringify(filteredWallet));
@@ -252,11 +248,11 @@ export default function InvoicesPage() {
       {/* Header สดใสมีสีสัน */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border-2 border-[#BF7E46]/30 shadow-md">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#97C6E0] border-2 border-[#5993b5] flex items-center justify-center text-2xl shadow-sm text-white">
+          <div className="w-12 h-12 rounded-2xl bg-[#97C6E0] border-2 border-[#5993b5] flex items-center justify-center text-2xl shadow-sm text-white shrink-0">
             📄
           </div>
           <div>
-            <h1 className="text-xl font-black text-[#BF7E46] flex items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-black text-[#BF7E46] flex items-center gap-2 flex-wrap">
               ออกใบเสร็จ / ใบกำกับภาษีร้าน {shopName} <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
             </h1>
             <p className="text-xs text-[#4a5568] font-semibold">ออกบิลพร้อมเลือกช่องทางรับเงิน และเชื่อมโยงหน้ารายงานอัตโนมัติ</p>
@@ -272,7 +268,7 @@ export default function InvoicesPage() {
       </div>
 
       {/* Form สร้างใบเสร็จ */}
-      <div className="bg-white p-5 sm:p-6 rounded-2xl border-2 border-[#97C6E0]/50 shadow-md space-y-4">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border-2 border-[#97C6E0]/50 shadow-md space-y-4">
         <div className="flex items-center gap-2 border-b-2 border-[#FBEDD6] pb-3">
           <span className="text-[#BF7E46] font-bold text-lg">📝</span>
           <h2 className="font-black text-sm text-[#2d3748]">สร้างใบเสร็จใหม่</h2>
@@ -314,7 +310,7 @@ export default function InvoicesPage() {
         {/* ตัวเลือกช่องทางการชำระเงิน 3 แบบ */}
         <div className="bg-[#FBEDD6] p-4 rounded-2xl border-2 border-[#f6ad55] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#BF7E46] text-white flex items-center justify-center font-bold shadow-sm">
+            <div className="w-9 h-9 rounded-xl bg-[#BF7E46] text-white flex items-center justify-center font-bold shadow-sm shrink-0">
               💳
             </div>
             <div>
@@ -325,7 +321,7 @@ export default function InvoicesPage() {
           <select 
             value={selectedWallet}
             onChange={(e) => setSelectedWallet(e.target.value)}
-            className="px-3 py-2 text-xs font-black bg-white border-2 border-[#f6ad55] rounded-xl text-[#7b341e] focus:outline-none focus:border-[#BF7E46] cursor-pointer shadow-sm min-w-[160px]"
+            className="w-full sm:w-auto px-3 py-2 text-xs font-black bg-white border-2 border-[#f6ad55] rounded-xl text-[#7b341e] focus:outline-none focus:border-[#BF7E46] cursor-pointer shadow-sm min-w-[160px]"
           >
             {paymentOptions.map((opt, idx) => (
               <option key={idx} value={opt}>
@@ -335,8 +331,8 @@ export default function InvoicesPage() {
           </select>
         </div>
 
-        {/* รายการสินค้า */}
-        <div className="space-y-2">
+        {/* รายการสินค้า (แก้ไขให้ Responsive ไม่ล้นจอมือถือ) */}
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-[#4a5568]">รายการสินค้า / บริการ</label>
             <button 
@@ -347,40 +343,46 @@ export default function InvoicesPage() {
             </button>
           </div>
 
-          {items.map((item, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <input 
-                type="text" 
-                placeholder="ชื่อสินค้า / รายการ" 
-                value={item.name}
-                onChange={(e) => handleItemChange(index, 'name', e.target.value)}
-                className="flex-1 px-3 py-2 text-xs border-2 border-[#cbd5e0] rounded-xl focus:outline-none focus:border-[#BF7E46] font-medium bg-[#faf7f2]"
-              />
-              <input 
-                type="number" 
-                placeholder="จำนวน" 
-                min="1"
-                value={item.qty}
-                onChange={(e) => handleItemChange(index, 'qty', e.target.value)}
-                className="w-20 px-3 py-2 text-xs border-2 border-[#cbd5e0] rounded-xl focus:outline-none focus:border-[#BF7E46] font-medium text-center bg-[#faf7f2]"
-              />
-              <input 
-                type="number" 
-                placeholder="ราคาต่อหน่วย" 
-                min="0"
-                value={item.price}
-                onChange={(e) => handleItemChange(index, 'price', e.target.value)}
-                className="w-28 px-3 py-2 text-xs border-2 border-[#cbd5e0] rounded-xl focus:outline-none focus:border-[#BF7E46] font-medium text-right bg-[#faf7f2]"
-              />
-              <button 
-                onClick={() => removeItemRow(index)}
-                disabled={items.length === 1}
-                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition disabled:opacity-30"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
+          <div className="space-y-2">
+            {items.map((item, index) => (
+              <div key={index} className="grid grid-cols-1 sm:flex sm:items-center gap-2 bg-[#faf7f2] sm:bg-transparent p-3 sm:p-0 rounded-xl border border-[#e2e8f0] sm:border-none">
+                <input 
+                  type="text" 
+                  placeholder="ชื่อสินค้า / รายการ" 
+                  value={item.name}
+                  onChange={(e) => handleItemChange(index, 'name', e.target.value)}
+                  className="w-full sm:flex-1 px-3 py-2 text-xs border-2 border-[#cbd5e0] rounded-xl focus:outline-none focus:border-[#BF7E46] font-medium bg-white sm:bg-[#faf7f2]"
+                />
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+                  <input 
+                    type="number" 
+                    placeholder="จำนวน" 
+                    min="1"
+                    value={item.qty}
+                    onChange={(e) => handleItemChange(index, 'qty', e.target.value)}
+                    className="w-full sm:w-20 px-3 py-2 text-xs border-2 border-[#cbd5e0] rounded-xl focus:outline-none focus:border-[#BF7E46] font-medium text-center bg-white sm:bg-[#faf7f2]"
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="ราคาต่อหน่วย" 
+                    min="0"
+                    value={item.price}
+                    onChange={(e) => handleItemChange(index, 'price', e.target.value)}
+                    className="w-full sm:w-28 px-3 py-2 text-xs border-2 border-[#cbd5e0] rounded-xl focus:outline-none focus:border-[#BF7E46] font-medium text-right bg-white sm:bg-[#faf7f2]"
+                  />
+                </div>
+                <div className="flex justify-end sm:block">
+                  <button 
+                    onClick={() => removeItemRow(index)}
+                    disabled={items.length === 1}
+                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition disabled:opacity-30"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-between pt-3 border-t-2 border-[#FBEDD6] gap-3">
@@ -403,7 +405,7 @@ export default function InvoicesPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full text-left border-collapse text-xs min-w-[600px]">
             <thead>
               <tr className="bg-[#97C6E0]/20 border-b-2 border-[#cbd5e0] text-[#1a365d] font-black">
                 <th className="p-3">เลขที่</th>

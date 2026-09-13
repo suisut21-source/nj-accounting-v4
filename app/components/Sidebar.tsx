@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { 
   FiHome, FiArrowDownLeft, FiArrowUpRight, FiRefreshCw, 
   FiTruck, FiFileText, FiPrinter, FiBarChart2, FiSettings,
-  FiMenu, FiX
+  FiMenu, FiX, FiPackage
 } from 'react-icons/fi';
 
 export default function Sidebar() {
@@ -49,6 +49,12 @@ export default function Sidebar() {
         { name: 'รายงานสรุปการเงิน', href: '/reports', icon: FiBarChart2 },
         { name: 'ตั้งค่าร้านค้า', href: '/settings', icon: FiSettings },
       ]
+    },
+    {
+      title: 'แพ็คเกจ & ระบบ 💎',
+      items: [
+        { name: 'แพ็คเกจการใช้งาน', href: '/pricing', icon: FiPackage },
+      ]
     }
   ];
 
@@ -81,12 +87,12 @@ export default function Sidebar() {
 
       {/* 🗂️ ตัว Sidebar หลัก */}
       <aside 
-        className={`fixed md:sticky top-0 left-0 z-50 w-64 min-h-screen p-4 flex flex-col justify-between shadow-lg md:shadow-md border-r transition-transform duration-300 ease-in-out ${
+        className={`fixed md:sticky top-0 left-0 z-50 w-64 h-screen p-4 flex flex-col justify-between shadow-lg md:shadow-md border-r transition-transform duration-300 ease-in-out overflow-y-auto ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
         style={{ backgroundColor: '#ADD8E6', borderColor: '#93C5FD' }}
       >
-        <div className="space-y-6">
+        <div className="space-y-6 pb-6">
           
           {/* โลโก้และชื่อร้าน */}
           <div className="hidden md:flex items-center gap-3 p-3 bg-white/90 backdrop-blur-sm rounded-2xl border-2 shadow-sm" style={{ borderColor: '#CC5500' }}>
@@ -148,7 +154,7 @@ export default function Sidebar() {
         </div>
 
         {/* Footer เล็กๆ ด้านล่าง */}
-        <div className="pt-4 border-t text-center mt-6" style={{ borderColor: 'rgba(255, 255, 255, 0.5)' }}>
+        <div className="pt-4 border-t text-center mt-6 shrink-0" style={{ borderColor: 'rgba(255, 255, 255, 0.5)' }}>
           <p className="text-[10px] font-bold" style={{ color: '#1E3A8A' }}>NJ Shop v1.0 • สู้ๆ ครับพี่! 💪✨</p>
         </div>
       </aside>
