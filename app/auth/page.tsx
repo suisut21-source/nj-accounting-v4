@@ -64,6 +64,9 @@ export default function AuthPage() {
         if (signInError) throw signInError;
       }
 
+      // บันทึกสถานะว่าล็อกอินแล้วในเครื่อง
+      localStorage.setItem('nj_is_logged_in', 'true');
+
       // พุ่งตรงไปหน้าตั้งค่าร้านค้าทันที
       window.location.href = '/settings';
 
