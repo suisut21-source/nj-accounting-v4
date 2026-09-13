@@ -1,9 +1,9 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from './lib/supabase';
+import { supabase } from '../lib/supabase';
 
-export default function AuthPage() {
+export default function RootAuthPage() {
   const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -33,15 +33,12 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        // เข้าสู่ระบบ
         const { error } = await supabase.auth.signInWithPassword({
           email: authEmail,
           password,
         });
-
         if (error) throw error;
       } else {
-        // สมัครสมาชิกใหม่
         const { error: signUpError } = await supabase.auth.signUp({
           email: authEmail,
           password,
@@ -52,22 +49,16 @@ export default function AuthPage() {
             },
           },
         });
-
         if (signUpError) throw signUpError;
 
-        // ล็อกอินต่อทันทีหลังสมัคร
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: authEmail,
           password,
         });
-
         if (signInError) throw signInError;
       }
 
-      // บันทึกสถานะว่าล็อกอินแล้วในเครื่อง
       localStorage.setItem('nj_is_logged_in', 'true');
-
-      // พุ่งตรงไปหน้าตั้งค่าร้านค้าทันที
       window.location.href = '/settings';
 
     } catch (err: any) {
@@ -86,28 +77,12 @@ export default function AuthPage() {
           <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: '#fbedd6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', fontSize: '32px', border: '1px solid rgba(191, 126, 70, 0.2)' }}>
             🐕
           </div>
-          
           <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#2d3748', margin: '0 0 8px 0' }}>
             {isLogin ? 'ยินดีต้อนรับกลับครับพี่! 👋' : 'มาสร้างร้านค้ากัน! 🚀'}
           </h1>
           <p style={{ fontSize: '12px', color: '#4a5568', margin: 0, fontWeight: '500' }}>
             {isLogin ? 'เข้าสู่ระบบด้วยเบอร์โทรศัพท์เพื่อจัดการร้านค้า' : 'กรอกเบอร์โทรและตั้งรหัสผ่านเพื่อเปิดบัญชีร้านค้า'}
           </p>
-        </div>
-
-        {/* กล่องโปรโมชั่นพิเศษ */}
-        <div style={{ backgroundColor: '#fffbf2', border: '1px solid #fbedd6', borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#bf7e46', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            🎁 สิทธิพิเศษสำหรับพี่:
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#4a5568', marginBottom: '6px', fontWeight: '600' }}>
-            <span>• ทดลองใช้งานฟรีเต็มระบบ</span>
-            <span style={{ backgroundColor: '#e6fffa', color: '#319795', padding: '2px 8px', borderRadius: '6px', fontWeight: 'bold' }}>1 เดือนเต็ม</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#4a5568', fontWeight: '600' }}>
-            <span>• หลังจากนั้นแพ็กเกจรายเดือน</span>
-            <span style={{ color: '#bf7e46', fontWeight: 'bold' }}>เพียง 199 บาท/เดือน</span>
-          </div>
         </div>
 
         {errorMessage && (
@@ -157,38 +132,23 @@ export default function AuthPage() {
             />
           </div>
 
-          <div style={{ paddingTop: '6px' }}>
-            <button
-              type="submit"
-              disabled={loading}
-              style={{ width: '100%', padding: '14px', backgroundColor: '#BF7E46', color: '#ffffff', fontWeight: '900', fontSize: '14px', borderRadius: '12px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
-            >
-              {loading ? 'กำลังตรวจสอบ...' : isLogin ? 'เข้าสู่ระบบด้วยเบอร์โทร' : 'สมัครสมาชิก & เริ่มต้นใช้งาน 🐕'}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{ width: '100%', padding: '14px', backgroundColor: '#BF7E46', color: '#ffffff', fontWeight: '900', fontSize: '14px', borderRadius: '12px', border: 'none', cursor: 'pointer', marginTop: '6px' }}
+          >
+            {loading ? 'กำลังตรวจสอบ...' : isLogin ? 'เข้าสู่ระบบด้วยเบอร์โทร' : 'สมัครสมาชิก & เริ่มต้นใช้งาน 🐕'}
+          </button>
         </form>
-
-        {/* กล่องติดต่อช่วยเหลือ */}
-        <div style={{ marginTop: '16px', padding: '10px', backgroundColor: '#f0fff4', border: '1px solid #c6f6d5', borderRadius: '12px', textAlign: 'center', fontSize: '11px', color: '#276749', fontWeight: '600' }}>
-          💬 ติดปัญหาตรงไหนทักมาได้ตลอดเลยนะครับ Line ID: @579mimsm
-        </div>
 
         <div style={{ textAlign: 'center', marginTop: '20px', borderTop: '1px solid #fbedd6', paddingTop: '16px' }}>
           <button
             type="button"
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setShopName(''); setPhone(''); setPassword('');
-              setErrorMessage('');
-            }}
+            onClick={() => { setIsLogin(!isLogin); setErrorMessage(''); }}
             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', color: '#4a5568' }}
           >
             {isLogin ? 'ยังไม่มีบัญชีร้านค้า? สร้างบัญชีเลย' : 'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ'}
           </button>
-        </div>
-
-        <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '10px', fontWeight: '500', color: '#a0aec0', borderTop: '1px solid #fbedd6', paddingTop: '14px' }}>
-          ระบบจัดการร้านค้า NJ Accounting v1.0.0 • ดูแลร้านค้าด้วยใจ 🐕✨
         </div>
       </div>
     </div>
