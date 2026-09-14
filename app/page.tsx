@@ -8,8 +8,9 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
-  // 🔐 ระบบเช็กสถานะการล็อกอิน (ถ้ายังไม่ล็อกอิน จะแสดงหน้าล็อกอินก่อน)
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoginMode, setIsLoginMode] = useState(true); // true = เข้าสู่ระบบ, false = สมัครสมาชิก
+  const [shopNameInput, setShopNameInput] = useState('');
   const [authPhone, setAuthPhone] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
@@ -21,7 +22,7 @@ export default function Home() {
     }
   }, []);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleAuthSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
 
@@ -36,9 +37,16 @@ export default function Home() {
       return;
     }
 
-    // ผ่านการตรวจสอบ จำลองการล็อกอินสำเร็จและบันทึกลงเครื่อง
+    if (!isLoginMode && !shopNameInput.trim()) {
+      setAuthError('กรุณากรอกชื่อร้านค้าของคุณครับ');
+      return;
+    }
+
     localStorage.setItem('nj_is_logged_in', 'true');
     localStorage.setItem('shop_phone', cleanPhone);
+    if (!isLoginMode) {
+      localStorage.setItem('shop_name', shopNameInput.trim());
+    }
     setIsLoggedIn(true);
   };
 
@@ -186,7 +194,7 @@ export default function Home() {
   const diffTimePnd90 = targetPnd90.getTime() - today.getTime();
   const diffDaysPnd90 = Math.ceil(diffTimePnd90 / (1000 * 60 * 60 * 24));
 
-  // 🛑 ถ่ายยังไม่ล็อกอิน ให้แสดงหน้าล็อกอินตรงนี้ทันทีโดยไม่ให้เห็นแดชบอร์ด
+  // 🛑 หน้าล็อกอิน / สมัครสมาชิก (ทำงานสมบูรณ์ สลับโหมดได้ทันที)
   if (!isLoggedIn) {
     return (
       <div style={{ minHeight: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#faf7f2', margin: 0, padding: '20px', boxSizing: 'border-box', position: 'fixed', top: 0, left: 0, zIndex: 9999, overflowY: 'auto' }}>
@@ -198,10 +206,10 @@ export default function Home() {
             </div>
             
             <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#2d3748', margin: '0 0 8px 0' }}>
-              ยินดีต้อนรับกลับครับพี่! 👋
+              {isLoginMode ? 'ยินดีต้อนรับกลับครับพี่! 👋' : 'มาสร้างร้านค้ากัน! 🚀'}
             </h1>
             <p style={{ fontSize: '12px', color: '#4a5568', margin: 0, fontWeight: '500' }}>
-              กรุณาเข้าสู่ระบบด้วยเบอร์โทรศัพท์เพื่อจัดการร้านค้า
+              {isLoginMode ? 'เข้าสู่ระบบด้วยเบอร์โทรศัพท์เพื่อจัดการร้านค้า' : 'กรอกข้อมูลเพื่อเปิดบัญชีร้านค้าใหม่'}
             </p>
           </div>
 
@@ -225,7 +233,21 @@ export default function Home() {
             </div>
           )}
 
-          <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {!isLoginMode && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4a5568', paddingLeft: '4px' }}>ชื่อร้านค้าของคุณ</label>
+                <input
+                  type="text"
+                  required
+                  value={shopNameInput}
+                  onChange={(e) => setShopNameInput(e.target.value)}
+                  placeholder="เช่น ร้านข้าวพันผัก"
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', backgroundColor: '#faf7f2', border: '1px solid #fbedd6', outline: 'none', fontSize: '14px', fontWeight: '600', color: '#2d3748', boxSizing: 'border-box' }}
+                />
+              </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4a5568', paddingLeft: '4px' }}>เบอร์โทรศัพท์ (10 หลัก)</label>
               <input
@@ -257,10 +279,23 @@ export default function Home() {
                 type="submit"
                 style={{ width: '100%', padding: '14px', backgroundColor: '#BF7E46', color: '#ffffff', fontWeight: '900', fontSize: '14px', borderRadius: '12px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
               >
-                เข้าสู่ระบบด้วยเบอร์โทร 🐕
+                {isLoginMode ? 'เข้าสู่ระบบด้วยเบอร์โทร 🐕' : 'สมัครสมาชิก & เริ่มต้นใช้งาน 🚀'}
               </button>
             </div>
           </form>
+
+          <div style={{ textAlign: 'center', marginTop: '16px' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setIsLoginMode(!isLoginMode);
+                setAuthError('');
+              }}
+              style={{ background: 'none', border: 'none', color: '#bf7e46', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              {isLoginMode ? 'ยังไม่มีบัญชีร้านค้า? สมัครสมาชิกใหม่ที่นี่' : 'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ'}
+            </button>
+          </div>
 
           <div style={{ marginTop: '16px', padding: '10px', backgroundColor: '#f0fff4', border: '1px solid #c6f6d5', borderRadius: '12px', textAlign: 'center', fontSize: '11px', color: '#276749', fontWeight: '600' }}>
             💬 ติดปัญหาตรงไหนทักมาได้ตลอดเลยนะครับ Line ID: @579mimsm
@@ -274,7 +309,7 @@ export default function Home() {
     );
   }
 
-  // ✅ ถ้าล็อกอินแล้ว จะแสดงหน้าแดชบอร์ดเดิมของพี่ทั้งหมดแบบครบถ้วนสมบูรณ์ตามปกติ!
+  // ✅ หน้าแดชบอร์ดจริง
   return (
     <div className="space-y-6 pb-20 max-w-7xl mx-auto font-sans relative bg-slate-50 min-h-screen px-4 sm:px-6 lg:px-8 overflow-x-hidden">
       
@@ -289,14 +324,13 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 self-end sm:self-auto">
-          {/* ปุ่มออกจากระบบเพิ่มให้เผื่ออยากเคลียร์สถานะล็อกอิน */}
+        <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto">
           <button 
             onClick={() => {
               localStorage.removeItem('nj_is_logged_in');
               setIsLoggedIn(false);
             }}
-            className="p-2 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition shadow-sm"
+            className="py-2 px-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition shadow-sm shrink-0"
             title="ออกจากระบบ"
           >
             🚪 ออกจากระบบ
@@ -304,15 +338,15 @@ export default function Home() {
 
           <button 
             onClick={() => setShowAlertModal(true)}
-            className="relative p-2 rounded-2xl bg-amber-50/80 hover:bg-amber-100 text-amber-800 border border-amber-200/60 transition flex items-center gap-1.5 px-3 text-xs font-bold shadow-sm"
+            className="py-2 px-3 rounded-2xl bg-amber-50/80 hover:bg-amber-100 text-amber-800 border border-amber-200/60 transition flex items-center gap-1.5 text-xs font-bold shadow-sm shrink-0"
           >
-            <Bell className="w-4 h-4 text-amber-500 animate-bounce" />
-            <span>แจ้งเตือนภาษี</span>
-            <span className="w-4 h-4 bg-rose-400 text-white text-[9px] font-bold rounded-full flex items-center justify-center ml-1">2</span>
+            <Bell className="w-4 h-4 text-amber-500 animate-bounce shrink-0" />
+            <span>แจ้งเตือน</span>
+            <span className="w-4 h-4 bg-rose-400 text-white text-[9px] font-bold rounded-full flex items-center justify-center shrink-0">2</span>
           </button>
           
-          <div className="flex items-center gap-2 bg-sky-50/40 px-3 py-2 rounded-2xl border-2 border-sky-200 hover:border-sky-300 text-xs text-slate-700 font-bold transition">
-            <Calendar className="w-3.5 h-3.5 text-sky-500" />
+          <div className="flex items-center gap-2 bg-sky-50/40 px-3 py-2 rounded-2xl border-2 border-sky-200 hover:border-sky-300 text-xs text-slate-700 font-bold transition shrink-0">
+            <Calendar className="w-3.5 h-3.5 text-sky-500 shrink-0" />
             <select 
               value={selectedMonth} 
               onChange={(e) => setSelectedMonth(e.target.value)}
@@ -365,7 +399,6 @@ export default function Home() {
 
       {/* KPI 4 Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* รายรับ */}
         <div className="bg-white rounded-3xl border border-emerald-100 p-4 shadow-sm hover:shadow-md transition relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-400"></div>
           <div className="flex justify-between items-start pt-1">
@@ -386,7 +419,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ค่าใช้จ่าย */}
         <div className="bg-white rounded-3xl border border-rose-100 p-4 shadow-sm hover:shadow-md transition relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-rose-400"></div>
           <div className="flex justify-between items-start pt-1">
@@ -408,7 +440,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* กำไรสุทธิ */}
         <div className="bg-white rounded-3xl border border-indigo-100 p-4 shadow-sm hover:shadow-md transition relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-400"></div>
           <div className="flex justify-between items-start pt-1">
@@ -430,7 +461,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ภาษีที่ควรเตรียม */}
         <div className="bg-gradient-to-br from-amber-50/60 to-orange-50/30 rounded-3xl border border-amber-200/60 p-4 shadow-sm hover:shadow-md transition relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-amber-400"></div>
           <div className="flex justify-between items-start pt-1">
