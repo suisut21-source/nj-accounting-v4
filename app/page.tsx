@@ -8,15 +8,51 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
+  // 🔐 ระบบเช็กสถานะการล็อกอิน (ถ้ายังไม่ล็อกอิน จะแสดงหน้าล็อกอินก่อน)
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authPhone, setAuthPhone] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+
+  useEffect(() => {
+    const savedAuth = localStorage.getItem('nj_is_logged_in');
+    if (savedAuth === 'true') {
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+
+    const cleanPhone = authPhone.replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      setAuthError('กรุณากรอกเบอร์โทรศัพท์มือถือให้ครบ 10 หลักครับ');
+      return;
+    }
+
+    if (authPassword.length < 6) {
+      setAuthError('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรครับ');
+      return;
+    }
+
+    // ผ่านการตรวจสอบ จำลองการล็อกอินสำเร็จและบันทึกลงเครื่อง
+    localStorage.setItem('nj_is_logged_in', 'true');
+    localStorage.setItem('shop_phone', cleanPhone);
+    setIsLoggedIn(true);
+  };
+
   const [incomeData, setIncomeData] = useState<any[]>([]);
   const [expenseData, setExpenseData] = useState<any[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [showAlertModal, setShowAlertModal] = useState<boolean>(false);
-const [shopName, setShopName] = useState('Aree');
+  const [shopName, setShopName] = useState('Aree');
+
   useEffect(() => {
     const savedName = localStorage.getItem('shop_name');
     if (savedName) setShopName(savedName);
   }, []);
+
   useEffect(() => {
     const savedIncome = 
       JSON.parse(localStorage.getItem('incomeTransactions') || 'null') ||
@@ -52,19 +88,16 @@ const [shopName, setShopName] = useState('Aree');
     ? expenseData 
     : expenseData.filter(item => String(item.date || '').startsWith(selectedMonth));
 
-  // 1. ยอดขายรวม (totalSales)
   const totalSales = filteredIncome.reduce((sum, item) => {
     const gross = Number(item?.grossSales || item?.total || item?.amount || item?.price || 0);
     return sum + gross;
   }, 0);
   
-  // 2. รายจ่ายจริงจากตารางเงินออก
   const expenseFromOut = filteredExpense.reduce((sum, item) => {
     const val = Number(item?.amount || item?.total || item?.netTotal || item?.price || item?.cost || 0);
     return sum + val;
   }, 0);
   
-  // 3. หัก GP / ค่าบริการ / หนี้ (สูตรเดียวกับหน้า Report เป๊ะๆ)
   const totalDeductions = filteredIncome.reduce((sum, item) => {
     const gp = Number(item.gpDeduction || item.gpAmount || 0);
     const ad = Number(item.adDeduction || item.adAmount || 0);
@@ -75,6 +108,7 @@ const [shopName, setShopName] = useState('Aree');
   const totalOtherExpenses = expenseFromOut;
   const totalExpenses = totalOtherExpenses + totalDeductions;
   const netProfit = totalSales - totalExpenses;
+
   const calculatePersonalIncomeTax = (income: number) => {
     const expenseDeduction = income * 0.60;
     const incomeAfterExpense = income - expenseDeduction;
@@ -152,85 +186,183 @@ const [shopName, setShopName] = useState('Aree');
   const diffTimePnd90 = targetPnd90.getTime() - today.getTime();
   const diffDaysPnd90 = Math.ceil(diffTimePnd90 / (1000 * 60 * 60 * 24));
 
- return (
+  // 🛑 ถ่ายยังไม่ล็อกอิน ให้แสดงหน้าล็อกอินตรงนี้ทันทีโดยไม่ให้เห็นแดชบอร์ด
+  if (!isLoggedIn) {
+    return (
+      <div style={{ minHeight: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#faf7f2', margin: 0, padding: '20px', boxSizing: 'border-box', position: 'fixed', top: 0, left: 0, zIndex: 9999, overflowY: 'auto' }}>
+        <div style={{ width: '100%', maxWidth: '440px', backgroundColor: '#ffffff', borderRadius: '24px', padding: '32px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', border: '1px solid #fbedd6', boxSizing: 'border-box' }}>
+          
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: '#fbedd6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', fontSize: '32px', border: '1px solid rgba(191, 126, 70, 0.2)' }}>
+              🐕
+            </div>
+            
+            <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#2d3748', margin: '0 0 8px 0' }}>
+              ยินดีต้อนรับกลับครับพี่! 👋
+            </h1>
+            <p style={{ fontSize: '12px', color: '#4a5568', margin: 0, fontWeight: '500' }}>
+              กรุณาเข้าสู่ระบบด้วยเบอร์โทรศัพท์เพื่อจัดการร้านค้า
+            </p>
+          </div>
+
+          <div style={{ backgroundColor: '#fffbf2', border: '1px solid #fbedd6', borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#bf7e46', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              🎁 สิทธิพิเศษสำหรับพี่:
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#4a5568', marginBottom: '6px', fontWeight: '600' }}>
+              <span>• ทดลองใช้งานฟรีเต็มระบบ</span>
+              <span style={{ backgroundColor: '#e6fffa', color: '#319795', padding: '2px 8px', borderRadius: '6px', fontWeight: 'bold' }}>1 เดือนเต็ม</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#4a5568', fontWeight: '600' }}>
+              <span>• หลังจากนั้นแพ็กเกจรายเดือน</span>
+              <span style={{ color: '#bf7e46', fontWeight: 'bold' }}>เพียง 199 บาท/เดือน</span>
+            </div>
+          </div>
+
+          {authError && (
+            <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#fff5f5', border: '1px solid #feb2b2', borderRadius: '12px', color: '#c53030', fontSize: '12px', fontWeight: 'bold', textAlign: 'center' }}>
+              ⚠️ {authError}
+            </div>
+          )}
+
+          <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4a5568', paddingLeft: '4px' }}>เบอร์โทรศัพท์ (10 หลัก)</label>
+              <input
+                type="tel"
+                required
+                maxLength={10}
+                value={authPhone}
+                onChange={(e) => setAuthPhone(e.target.value.replace(/\D/g, ''))}
+                placeholder="0812345678"
+                style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', backgroundColor: '#faf7f2', border: '1px solid #fbedd6', outline: 'none', fontSize: '14px', fontWeight: '600', color: '#2d3748', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4a5568', paddingLeft: '4px' }}>รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)</label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                placeholder="••••••••"
+                style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', backgroundColor: '#faf7f2', border: '1px solid #fbedd6', outline: 'none', fontSize: '14px', fontWeight: '600', color: '#2d3748', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div style={{ paddingTop: '6px' }}>
+              <button
+                type="submit"
+                style={{ width: '100%', padding: '14px', backgroundColor: '#BF7E46', color: '#ffffff', fontWeight: '900', fontSize: '14px', borderRadius: '12px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+              >
+                เข้าสู่ระบบด้วยเบอร์โทร 🐕
+              </button>
+            </div>
+          </form>
+
+          <div style={{ marginTop: '16px', padding: '10px', backgroundColor: '#f0fff4', border: '1px solid #c6f6d5', borderRadius: '12px', textAlign: 'center', fontSize: '11px', color: '#276749', fontWeight: '600' }}>
+            💬 ติดปัญหาตรงไหนทักมาได้ตลอดเลยนะครับ Line ID: @579mimsm
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '10px', fontWeight: '500', color: '#a0aec0', borderTop: '1px solid #fbedd6', paddingTop: '14px' }}>
+            ระบบจัดการร้านค้า NJ Accounting v1.0.0 • ดูแลร้านค้าด้วยใจ 🐕✨
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ ถ้าล็อกอินแล้ว จะแสดงหน้าแดชบอร์ดเดิมของพี่ทั้งหมดแบบครบถ้วนสมบูรณ์ตามปกติ!
+  return (
     <div className="space-y-6 pb-20 max-w-7xl mx-auto font-sans relative bg-slate-50 min-h-screen px-4 sm:px-6 lg:px-8 overflow-x-hidden">
       
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border-2 border-[#BF7E46]/30 shadow-sm">
         <div className="flex items-center gap-3.5">
-         
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-black text-slate-800 tracking-tight">สวัสดีครับ,{shopName} 👋</h1>
-              
             </div>
             <p className="text-xs text-slate-400 font-medium mt-0.5">ร้าน{shopName} • ภาพรวมการเงินและภาษีประจำวัน</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5 self-end sm:self-auto">
-  <button 
-    onClick={() => setShowAlertModal(true)}
-    className="relative p-2 rounded-2xl bg-amber-50/80 hover:bg-amber-100 text-amber-800 border border-amber-200/60 transition flex items-center gap-1.5 px-3 text-xs font-bold shadow-sm"
-  >
-    <Bell className="w-4 h-4 text-amber-500 animate-bounce" />
-    <span>แจ้งเตือนภาษี</span>
-    <span className="w-4 h-4 bg-rose-400 text-white text-[9px] font-bold rounded-full flex items-center justify-center ml-1">2</span>
-  </button>
-  
-  {/* กรอบเลือกเดือนเปลี่ยนเป็นโทนสีฟ้า Baby Blue แล้วครับ */}
-  <div className="flex items-center gap-2 bg-sky-50/40 px-3 py-2 rounded-2xl border-2 border-sky-200 hover:border-sky-300 text-xs text-slate-700 font-bold transition">
-    <Calendar className="w-3.5 h-3.5 text-sky-500" />
-    <select 
-      value={selectedMonth} 
-      onChange={(e) => setSelectedMonth(e.target.value)}
-      className="bg-transparent focus:outline-none cursor-pointer text-slate-600"
-    >
-      <option value="all">ทุกเดือนทั้งหมด</option>
-      {availableMonths.map((m) => (
-        <option key={m} value={m}>เดือน {m}</option>
-      ))}
-    </select>
-  </div>
-</div>
-</div>
+          {/* ปุ่มออกจากระบบเพิ่มให้เผื่ออยากเคลียร์สถานะล็อกอิน */}
+          <button 
+            onClick={() => {
+              localStorage.removeItem('nj_is_logged_in');
+              setIsLoggedIn(false);
+            }}
+            className="p-2 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition shadow-sm"
+            title="ออกจากระบบ"
+          >
+            🚪 ออกจากระบบ
+          </button>
+
+          <button 
+            onClick={() => setShowAlertModal(true)}
+            className="relative p-2 rounded-2xl bg-amber-50/80 hover:bg-amber-100 text-amber-800 border border-amber-200/60 transition flex items-center gap-1.5 px-3 text-xs font-bold shadow-sm"
+          >
+            <Bell className="w-4 h-4 text-amber-500 animate-bounce" />
+            <span>แจ้งเตือนภาษี</span>
+            <span className="w-4 h-4 bg-rose-400 text-white text-[9px] font-bold rounded-full flex items-center justify-center ml-1">2</span>
+          </button>
+          
+          <div className="flex items-center gap-2 bg-sky-50/40 px-3 py-2 rounded-2xl border-2 border-sky-200 hover:border-sky-300 text-xs text-slate-700 font-bold transition">
+            <Calendar className="w-3.5 h-3.5 text-sky-500" />
+            <select 
+              value={selectedMonth} 
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="bg-transparent focus:outline-none cursor-pointer text-slate-600"
+            >
+              <option value="all">ทุกเดือนทั้งหมด</option>
+              {availableMonths.map((m) => (
+                <option key={m} value={m}>เดือน {m}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
 
       {/* 🚨 TAX URGENT ALERT BANNER */}
-<div className="relative bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 p-[2px] rounded-3xl shadow-lg shadow-orange-200/50 animate-pulse-slow">
-  <div className="bg-gradient-to-r from-rose-50 via-orange-50 to-amber-50 p-4 rounded-[22px] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-    
-    <div className="flex items-center gap-3">
-      <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-2xl shrink-0 shadow-md ring-2 ring-rose-200 animate-bounce-slow">
-        ⏳
-      </div>
-      <div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="font-black text-sm sm:text-base tracking-tight text-rose-950">
-            แจ้งเตือนกำหนดยื่นภาษีบุคคลธรรมดา
-          </h3>
-          <span className="bg-rose-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm animate-pulse">
-            🔥 สำคัญมาก
-          </span>
-        </div>
-        <p className="text-xs sm:text-sm text-rose-900/90 font-semibold mt-1">
-          เหลือเวลาอีก{" "}
-          <strong className="text-rose-600 text-base sm:text-lg font-black underline decoration-2 underline-offset-2">
-            {diffDaysPnd94 > 0 ? diffDaysPnd94 : 0} วัน
-          </strong>{" "}
-          ก่อนครบกำหนดยื่น ภ.ง.ด.94 (ครึ่งปี) ภายใน 30 กันยายนนี้!
-        </p>
-      </div>
-    </div>
+      <div className="relative bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 p-[2px] rounded-3xl shadow-lg shadow-orange-200/50 animate-pulse-slow">
+        <div className="bg-gradient-to-r from-rose-50 via-orange-50 to-amber-50 p-4 rounded-[22px] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-2xl shrink-0 shadow-md ring-2 ring-rose-200 animate-bounce-slow">
+              ⏳
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-black text-sm sm:text-base tracking-tight text-rose-950">
+                  แจ้งเตือนกำหนดยื่นภาษีบุคคลธรรมดา
+                </h3>
+                <span className="bg-rose-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm animate-pulse">
+                  🔥 สำคัญมาก
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-rose-900/90 font-semibold mt-1">
+                เหลือเวลาอีก{" "}
+                <strong className="text-rose-600 text-base sm:text-lg font-black underline decoration-2 underline-offset-2">
+                  {diffDaysPnd94 > 0 ? diffDaysPnd94 : 0} วัน
+                </strong>{" "}
+                ก่อนครบกำหนดยื่น ภ.ง.ด.94 (ครึ่งปี) ภายใน 30 กันยายนนี้!
+              </p>
+            </div>
+          </div>
 
-    <button 
-      onClick={() => setShowAlertModal(true)}
-      className="w-full md:w-auto bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl shadow-lg shadow-rose-300/50 transition-all duration-150 shrink-0 flex items-center justify-center gap-1.5"
-    >
-      ตรวจสอบรายการภาษีทั้งหมด
-      <span className="text-base">→</span>
-    </button>
-  </div>
-</div>
+          <button 
+            onClick={() => setShowAlertModal(true)}
+            className="w-full md:w-auto bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl shadow-lg shadow-rose-300/50 transition-all duration-150 shrink-0 flex items-center justify-center gap-1.5"
+          >
+            ตรวจสอบรายการภาษีทั้งหมด
+            <span className="text-base">→</span>
+          </button>
+        </div>
+      </div>
+
       {/* KPI 4 Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* รายรับ */}
@@ -254,7 +386,7 @@ const [shopName, setShopName] = useState('Aree');
           </div>
         </div>
 
-        {/* ค่าใช้จ่าย (ตรงกับหน้า Report เป๊ะ) */}
+        {/* ค่าใช้จ่าย */}
         <div className="bg-white rounded-3xl border border-rose-100 p-4 shadow-sm hover:shadow-md transition relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-rose-400"></div>
           <div className="flex justify-between items-start pt-1">
@@ -623,7 +755,6 @@ const [shopName, setShopName] = useState('Aree');
           </div>
         </div>
       )}
-</div>
-    );
-  }
- 
+    </div>
+  );
+}
