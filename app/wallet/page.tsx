@@ -63,44 +63,27 @@ export default function WalletPage() {
 
     const formattedIncome = income.map((item: any) => {
       const totalAmount = Number(item.netTransfer || item.netAmount || item.net || item.amount || item.displayAmount || 0);
-      const cashInDrawer = Number(item.cashInDrawer || 0);
-      const bankTransfer = Number(item.bankTransfer || 0);
       
-      // รวมข้อความทุกฟิลด์เพื่อเช็กว่าเป็นช่องทางไหน
+      // รวมข้อความทุกฟิลด์เพื่อตรวจสอบว่าเป็นช่องทางไหน
       const targetAccount = `${item.bankAccount || ''} ${item.channel || ''} ${item.paymentMethod || ''} ${item.note || ''} ${item.category || ''}`.toLowerCase();
 
-      const isCash = targetAccount.includes('เงินสด') || targetAccount.includes('cash') || targetAccount.includes('หน้าร้าน');
+      // เช็กให้ชัดเจน: ถ้าระบุชื่อธนาคาร หรือคำว่าโอน ให้เข้าบัญชีธนาคารทันที
+      const isExplicitCash = targetAccount.includes('เงินสด') && !targetAccount.includes('โอน') && !targetAccount.includes('ไทยพาณิชย์') && !targetAccount.includes('กสิกรไทย') && !targetAccount.includes('กรุงไทย') && !targetAccount.includes('กรุงเทพ') && !targetAccount.includes('กรุงศรี');
       const isSub = targetAccount.includes('สำรอง') || targetAccount.includes(currentSubName.toLowerCase());
-      const isMain = targetAccount.includes('หลัก') || targetAccount.includes(currentMainName.toLowerCase()) || targetAccount.includes('กรุงไทย') || targetAccount.includes('ไทยพาณิชย์') || targetAccount.includes('กสิกรไทย') || targetAccount.includes('กรุงเทพ') || targetAccount.includes('กรุงศรี');
+      const isBankTransfer = targetAccount.includes('ไทยพาณิชย์') || targetAccount.includes('กสิกรไทย') || targetAccount.includes('กรุงไทย') || targetAccount.includes('กรุงเทพ') || targetAccount.includes('กรุงศรี') || targetAccount.includes('โอน') || targetAccount.includes('bank') || targetAccount.includes('qr');
 
-      if (cashInDrawer > 0) {
-        cashTotal += cashInDrawer;
-      }
-      if (bankTransfer > 0) {
-        if (isSub) subTotal += bankTransfer;
-        else mainTotal += bankTransfer;
-      }
-
-      if (cashInDrawer === 0 && bankTransfer === 0) {
-        if (isCash) {
-          cashTotal += totalAmount;
-        } else if (isSub) {
-          subTotal += totalAmount;
-        } else {
-          // ถ้าไม่ใช่เงินสดชัดเจน ให้เข้าบัญชีหลักตามค่าเริ่มต้น
-          mainTotal += totalAmount;
-        }
+      if (isExplicitCash) {
+        cashTotal += totalAmount;
+      } else if (isSub) {
+        subTotal += totalAmount;
+      } else if (isBankTransfer || totalAmount > 0) {
+        // ถ้าเป็นชื่อธนาคารหรือไม่ได้ระบุว่าเป็นเงินสด ให้เข้าบัญชีหลัก
+        mainTotal += totalAmount;
       } else {
-        const accounted = cashInDrawer + bankTransfer;
-        if (totalAmount > accounted) {
-          const remainder = totalAmount - accounted;
-          if (isCash) cashTotal += remainder;
-          else if (isSub) subTotal += remainder;
-          else mainTotal += remainder;
-        }
+        cashTotal += totalAmount;
       }
 
-      const displayChan = item.bankAccount || item.channel || (isCash ? 'เงินสดหน้าร้าน' : `โอนเข้า (${currentMainName})`);
+      const displayChan = item.bankAccount || item.channel || (isExplicitCash ? 'เงินสดหน้าร้าน' : `โอนเข้า (${currentMainName})`);
 
       return {
         ...item,
@@ -115,7 +98,7 @@ export default function WalletPage() {
       const amt = Number(item.amount || 0);
       const targetAccount = `${item.paymentMethod || ''} ${item.channel || ''} ${item.vendor || ''}`.toLowerCase();
 
-      if (targetAccount.includes('เงินสด') || targetAccount.includes('cash')) {
+      if (targetAccount.includes('เงินสด') && !targetAccount.includes('โอน')) {
         cashTotal -= amt;
       } else if (targetAccount.includes('สำรอง') || targetAccount.includes(currentSubName.toLowerCase())) {
         subTotal -= amt;
