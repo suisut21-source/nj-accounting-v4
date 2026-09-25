@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 interface StoreData {
   shop_name: string;
@@ -19,39 +19,35 @@ export default function PricingPage() {
   const [daysLeft, setDaysLeft] = useState<number>(30);
   const supportContact = '@579mimsm (Admin Support / NJ ยินดีบริการ)';
 
-  // ข้อมูลบัญชีธนาคารของร้านเรา
   const myBankInfo = {
     bankName: 'ธนาคารไทยพาณิชย์ (SCB)',
     accountNumber: '417-118907-4',
     accountName: 'นางสาวณัฐมล ชุ่มชื่น'
   };
 
-  // ดึงข้อมูลสถานะร้านค้าจริงจาก Supabase (เช็กจากเบอร์โทรที่ล็อกอิน)
-  const fetchStoreStatus = async () => {
-    const loggedInPhone = localStorage.getItem('nj_phone');
-    if (!loggedInPhone) return;
-
-    const { data, error } = await supabase
-      .from('stores')
-      .select('*')
-      .eq('phone_number', loggedInPhone)
-      .single();
-
-    if (!error && data) {
-      setStoreInfo(data);
-      
-      // คำนวณวันหมดอายุ
-      if (data.expire_date) {
-        const expDate = new Date(data.expire_date);
-        const now = new Date();
-        const diffTime = expDate.getTime() - now.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        setDaysLeft(diffDays > 0 ? diffDays : 0);
-      }
-    }
-  };
-
   useEffect(() => {
+    const fetchStoreStatus = async () => {
+      const loggedInPhone = localStorage.getItem('nj_phone');
+      if (!loggedInPhone) return;
+
+      const { data, error } = await supabase
+        .from('stores')
+        .select('*')
+        .eq('phone_number', loggedInPhone)
+        .single();
+
+      if (!error && data) {
+        setStoreInfo(data);
+        if (data.expire_date) {
+          const expDate = new Date(data.expire_date);
+          const now = new Date();
+          const diffTime = expDate.getTime() - now.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          setDaysLeft(diffDays > 0 ? diffDays : 0);
+        }
+      }
+    };
+
     fetchStoreStatus();
     const interval = setInterval(fetchStoreStatus, 5000);
     return () => clearInterval(interval);
@@ -108,7 +104,6 @@ export default function PricingPage() {
     setShopName('');
     setShopPhone('');
     setSlipImage(null);
-    fetchStoreStatus();
   };
 
   return (
@@ -182,7 +177,7 @@ export default function PricingPage() {
         </div>
       )}
 
-      {/* ส่วนเลือกแพ็กเกจ (Pricing Cards) */}
+      {/* ส่วนเลือกแพ็กเกจ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         
         {/* NJ Start */}
@@ -385,4 +380,3 @@ export default function PricingPage() {
     </div>
   );
 }
-
