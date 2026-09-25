@@ -1,16 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 
-interface SlipItem {
-  id: number;
-  date: string;
-  shopName: string;
-  shopPhone: string;
-  plan: string;
-  slipImage: string;
-  status: string;
-  startDate?: string;
-  expireDate?: string;
+interface StoreData {
+  shop_name: string;
+  phone_number: string;
+  subscription_status: string;
+  package_name: string;
+  expire_date: string;
 }
 
 export default function PricingPage() {
@@ -18,44 +15,47 @@ export default function PricingPage() {
   const [shopName, setShopName] = useState('');
   const [shopPhone, setShopPhone] = useState('');
   const [slipImage, setSlipImage] = useState<string | null>(null);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [mySubscription, setMySubscription] = useState<SlipItem | null>(null);
+  const [storeInfo, setStoreInfo] = useState<StoreData | null>(null);
   const [daysLeft, setDaysLeft] = useState<number>(30);
   const supportContact = '@579mimsm (Admin Support / NJ ยินดีบริการ)';
 
-  // ข้อมูลบัญชีธนาคารของร้านเรา (สำหรับให้ลูกค้าโอนเงินชำระค่าบริการ)
+  // ข้อมูลบัญชีธนาคารของร้านเรา
   const myBankInfo = {
     bankName: 'ธนาคารไทยพาณิชย์ (SCB)',
     accountNumber: '417-118907-4',
     accountName: 'นางสาวณัฐมล ชุ่มชื่น'
   };
 
-  // โหลดข้อมูลแพ็กเกจและคำนวณวันหมดอายุ 30 วัน
-  useEffect(() => {
-    const savedSlips: SlipItem[] = JSON.parse(localStorage.getItem('adminPendingSlips') || '[]');
-    if (savedSlips.length > 0) {
-      const currentSub = savedSlips[0];
-      
-      if (!currentSub.expireDate) {
-        const start = new Date();
-        const expire = new Date();
-        expire.setDate(expire.getDate() + 30);
-        
-        currentSub.startDate = start.toISOString();
-        currentSub.expireDate = expire.toISOString();
-        
-        savedSlips[0] = currentSub;
-        localStorage.setItem('adminPendingSlips', JSON.stringify(savedSlips));
-      }
+  // ดึงข้อมูลสถานะร้านค้าจริงจาก Supabase (เช็กจากเบอร์โทรที่ล็อกอิน)
+  const fetchStoreStatus = async () => {
+    const loggedInPhone = localStorage.getItem('nj_phone');
+    if (!loggedInPhone) return;
 
-      const expDate = new Date(currentSub.expireDate);
-      const now = new Date();
-      const diffTime = expDate.getTime() - now.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const { data, error } = await supabase
+      .from('stores')
+      .select('*')
+      .eq('phone_number', loggedInPhone)
+      .single();
+
+    if (!error && data) {
+      setStoreInfo(data);
       
-      setDaysLeft(diffDays > 0 ? diffDays : 0);
-      setMySubscription(currentSub);
+      // คำนวณวันหมดอายุ
+      if (data.expire_date) {
+        const expDate = new Date(data.expire_date);
+        const now = new Date();
+        const diffTime = expDate.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        setDaysLeft(diffDays > 0 ? diffDays : 0);
+      }
     }
+  };
+
+  useEffect(() => {
+    fetchStoreStatus();
+    // ตั้งรีเฟรชเช็กสถานะอัตโนมัติทุกๆ 5 วินาที
+    const interval = setInterval(fetchStoreStatus, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,7 +74,7 @@ export default function PricingPage() {
     reader.readAsDataURL(file);
   };
 
-  const handleSubmitTrial = (e: React.FormEvent) => {
+  const handleSubmitTrial = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!shopName.trim()) {
       alert('กรุณากรอกชื่อร้านค้าของคุณ');
@@ -85,39 +85,32 @@ export default function PricingPage() {
       return;
     }
 
-    const startDateObj = new Date();
+    const cleanPhone = shopPhone.replace(/\D/g, '');
     const expireDateObj = new Date();
     expireDateObj.setDate(expireDateObj.getDate() + 30);
 
-    const newTrialSubmission: SlipItem = {
-      id: Date.now(),
-      date: new Date().toLocaleString(),
-      shopName,
-      shopPhone,
-      plan: selectedPlan,
-      slipImage: slipImage || 'https://placehold.co/400x300?text=Free+Trial+1+Month',
-      status: 'รอตรวจสอบ',
-      startDate: startDateObj.toISOString(),
-      expireDate: expireDateObj.toISOString()
-    };
+    // อัปเดตข้อมูลลง Supabase (ตาราง stores)
+    const { error } = await supabase
+      .from('stores')
+      .update({
+        shop_name: shopName,
+        package_name: selectedPlan,
+        subscription_status: 'pending', // ส่งสถานะไปรอแอดมินตรวจสอบ
+        expire_date: expireDateObj.toISOString()
+      })
+      .eq('phone_number', cleanPhone);
 
-    try {
-      const existingSlips = JSON.parse(localStorage.getItem('adminPendingSlips') || '[]');
-      const updatedSlips = [newTrialSubmission, ...existingSlips];
-      localStorage.setItem('adminPendingSlips', JSON.stringify(updatedSlips));
-      setMySubscription(newTrialSubmission);
-      setDaysLeft(30);
-    } catch (error) {
-      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    if (error) {
+      alert('⚠️ เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
+      console.error(error);
       return;
     }
 
-    setIsSubmitted(true);
-    alert('ลงทะเบียนรับสิทธิ์ทดลองใช้ฟรี 1 เดือนเรียบร้อยแล้วครับ! รอแอดมินตรวจสอบและเปิดสิทธิ์ใช้งานได้เลย 🐾');
-    
+    alert('ลงทะเบียนรับสิทธิ์เรียบร้อยแล้วครับ! รอแอดมินตรวจสอบและอนุมัติเปิดสิทธิ์ใช้งาน 🐾');
     setShopName('');
     setShopPhone('');
     setSlipImage(null);
+    fetchStoreStatus(); // ดึงข้อมูลอัปเดตทันที
   };
 
   return (
@@ -152,30 +145,30 @@ export default function PricingPage() {
         </div>
       </div>
 
-      {/* 🌟 กล่องแสดงสถานะแพ็กเกจและการนับถอยหลังวันใช้งาน */}
-      {mySubscription && (
+      {/* 🌟 กล่องแสดงสถานะแพ็กเกจจาก Cloud DB จริง */}
+      {storeInfo && (
         <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border-2 border-amber-300 space-y-5" style={{ backgroundColor: '#FFFBEB' }}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-amber-200 pb-4">
             <div className="flex items-center gap-3">
               <span className="text-2xl">👑</span>
               <div>
-                <h3 className="font-black text-sm text-slate-900">สถานะแพ็กเกจของร้านคุณ ({mySubscription.shopName})</h3>
-                <p className="text-xs text-slate-600">เบอร์โทรติดต่อ: {mySubscription.shopPhone}</p>
+                <h3 className="font-black text-sm text-slate-900">สถานะแพ็กเกจของร้านคุณ ({storeInfo.shop_name})</h3>
+                <p className="text-xs text-slate-600">เบอร์โทรติดต่อ: {storeInfo.phone_number}</p>
               </div>
             </div>
             <span className={`text-xs font-black px-4 py-1.5 rounded-full shadow-2xs ${
-              mySubscription.status.includes('อนุมัติ') 
+              storeInfo.subscription_status === 'active' 
                 ? 'bg-emerald-600 text-white' 
                 : 'bg-amber-500 text-white animate-pulse'
             }`}>
-              {mySubscription.status}
+              {storeInfo.subscription_status === 'active' ? 'อนุมัติแล้ว ✅' : 'รอตรวจสอบ ⏳'}
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs pt-1">
             <div className="bg-white p-4 rounded-2xl border border-amber-200 space-y-1">
               <span className="text-slate-400 font-bold">แพ็กเกจที่เลือก:</span>
-              <p className="font-black text-[#BF7E46] text-sm">{mySubscription.plan}</p>
+              <p className="font-black text-[#BF7E46] text-sm">{storeInfo.package_name || 'ทดลองใช้ฟรี 30 วัน'}</p>
             </div>
             <div className="bg-white p-4 rounded-2xl border border-amber-200 space-y-1">
               <span className="text-slate-400 font-bold">ระยะเวลาทดลองใช้:</span>
@@ -191,7 +184,7 @@ export default function PricingPage() {
         </div>
       )}
 
-      {/* ส่วนเลือกแพ็กเกจ (Pricing Cards) แยกตัวเลือกชัดเจน */}
+      {/* ส่วนเลือกแพ็กเกจ (Pricing Cards) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         
         {/* NJ Start */}
@@ -302,6 +295,7 @@ export default function PricingPage() {
               <label className="block text-xs font-bold text-slate-700 mb-1.5">ชื่อร้านค้าของคุณ</label>
               <input 
                 type="text"
+                required
                 value={shopName}
                 onChange={(e) => setShopName(e.target.value)}
                 placeholder="เช่น ร้านพาเพลิน"
@@ -309,12 +303,14 @@ export default function PricingPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">เบอร์โทรศัพท์ติดต่อ (สำหรับผูกและเปิดสิทธิ์)</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">เบอร์โทรศัพท์ติดต่อ (ที่ใช้สมัครสมาชิก)</label>
               <input 
                 type="text"
+                required
+                maxLength={10}
                 value={shopPhone}
-                onChange={(e) => setShopPhone(e.target.value)}
-                placeholder="08x-xxx-xxxx"
+                onChange={(e) => setShopPhone(e.target.value.replace(/\D/g, ''))}
+                placeholder="0812345678"
                 className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-2xl outline-none text-slate-800 text-xs shadow-sm focus:border-[#BF7E46]"
               />
             </div>
@@ -338,21 +334,15 @@ export default function PricingPage() {
 
           <button
             type="submit"
-            className="w-full py-4 text-xs font-black uppercase tracking-wider rounded-2xl shadow-md transition hover:opacity-90 text-white"
+            className="w-full py-4 text-xs font-black uppercase tracking-wider rounded-2xl shadow-md transition hover:opacity-90 text-white cursor-pointer"
             style={{ backgroundColor: '#BF7E46' }}
           >
             🎁 ยืนยันรับสิทธิ์ทดลองใช้ฟรี 1 เดือน ({selectedPlan.split(' ')[0]} {selectedPlan.split(' ')[1]})
           </button>
         </form>
-
-        {isSubmitted && (
-          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 font-bold text-center">
-            ✨ ลงทะเบียนสำเร็จ! ข้อมูลถูกส่งไปที่ระบบแอดมินแล้ว รออนุมัติเปิดสิทธิ์ใช้งานฟรี 1 เดือนได้เลยครับ
-          </div>
-        )}
       </div>
 
-      {/* 💳 กล่องแสดงบัญชีธนาคารสำหรับโอนเงิน (เผื่อลูกค้าต้องการชำระเงินต่ออายุ) */}
+      {/* บัญชีธนาคาร */}
       <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 space-y-4">
         <h3 className="font-black text-sm text-slate-900 flex items-center gap-2">
           <span>💳</span> ช่องทางชำระเงินค่าบริการ (กรณีต่ออายุแพ็กเกจ)
@@ -397,3 +387,4 @@ export default function PricingPage() {
     </div>
   );
 }
+
