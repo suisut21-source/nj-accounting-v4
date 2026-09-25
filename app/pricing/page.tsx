@@ -53,7 +53,6 @@ export default function PricingPage() {
 
   useEffect(() => {
     fetchStoreStatus();
-    // ตั้งรีเฟรชเช็กสถานะอัตโนมัติทุกๆ 5 วินาที
     const interval = setInterval(fetchStoreStatus, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -89,13 +88,12 @@ export default function PricingPage() {
     const expireDateObj = new Date();
     expireDateObj.setDate(expireDateObj.getDate() + 30);
 
-    // อัปเดตข้อมูลลง Supabase (ตาราง stores)
     const { error } = await supabase
       .from('stores')
       .update({
         shop_name: shopName,
         package_name: selectedPlan,
-        subscription_status: 'pending', // ส่งสถานะไปรอแอดมินตรวจสอบ
+        subscription_status: 'pending',
         expire_date: expireDateObj.toISOString()
       })
       .eq('phone_number', cleanPhone);
@@ -110,7 +108,7 @@ export default function PricingPage() {
     setShopName('');
     setShopPhone('');
     setSlipImage(null);
-    fetchStoreStatus(); // ดึงข้อมูลอัปเดตทันที
+    fetchStoreStatus();
   };
 
   return (
