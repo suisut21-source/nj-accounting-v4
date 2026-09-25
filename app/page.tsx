@@ -10,11 +10,12 @@ import { supabase } from './lib/supabase'; // 🐾 อย่าลืมเช�
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isLoginMode, setIsLoginMode] = useState(true); // true = เข้าสู่ระบบ, false = สมัครสมาชิก
+  const [isLoginMode, setIsLoginMode] = useState(true);
   const [shopNameInput, setShopNameInput] = useState('');
   const [authPhone, setAuthPhone] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
+  const [loading, setLoading] = useState(false); // 🐾 เพิ่มบรรทัดนี้เข้าไปครับพี่!
 
   // 🐾 1. ระบบเช็กสิทธิ์และวันหมดอายุอัตโนมัติ (เพิ่มเข้ามาตรงนี้ครับ)
   useEffect(() => {
@@ -50,34 +51,94 @@ export default function Home() {
     checkSubscriptionExpire();
   }, []);
 
-  const handleAuthSubmit = (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
+    setLoading(true);
 
     const cleanPhone = authPhone.replace(/\D/g, '');
     if (cleanPhone.length !== 10) {
       setAuthError('กรุณากรอกเบอร์โทรศัพท์มือถือให้ครบ 10 หลักครับ');
+      setLoading(false);
       return;
     }
 
     if (authPassword.length < 6) {
       setAuthError('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรครับ');
+      setLoading(false);
       return;
     }
 
     if (!isLoginMode && !shopNameInput.trim()) {
       setAuthError('กรุณากรอกชื่อร้านค้าของคุณครับ');
+      setLoading(false);
       return;
     }
 
-    localStorage.setItem('nj_is_logged_in', 'true');
-    localStorage.setItem('shop_phone', cleanPhone);
-    if (!isLoginMode) {
-      localStorage.setItem('shop_name', shopNameInput.trim());
-    }
-    setIsLoggedIn(true);
-  };
+    try {
+      if (isLoginMode) {
+        // --- เข้าสู่ระบบ เช็กจาก Supabase ---
+        const { data, error } = await supabase
+          .from('stores')
+          .select('*')
+          .eq('phone_number', cleanPhone)
+          .eq('password', authPassword)
+          .single();
 
+        if (error || !data) {
+          throw new Error('เบอร์โทรศัพท์หรือรหัสผ่านไม่ถูกต้องครับ');
+        }
+
+        localStorage.setItem('nj_is_logged_in', 'true');
+        localStorage.setItem('nj_phone', cleanPhone);
+        localStorage.setItem('shop_name', data.shop_name || 'ร้านค้าของฉัน');
+        setIsLoggedIn(true);
+
+      } else {
+        // --- สมัครสมาชิกใหม่ บันทึกลงตาราง stores บน Supabase ทันที ---
+        const { data: existingStore } = await supabase
+          .from('stores')
+          .select('phone_number')
+          .eq('phone_number', cleanPhone)
+          .single();
+
+        if (existingStore) {
+          throw new Error('เบอร์โทรศัพท์นี้ถูกใช้งานสมัครร้านค้าไปแล้วครับ');
+        }
+
+        // คำนวณวันหมดอายุทดลองใช้ฟรี 30 วัน
+        const trialExpireDate = new Date();
+        trialExpireDate.setDate(trialExpireDate.getDate() + 30);
+
+        const { error: insertError } = await supabase
+          .from('stores')
+          .insert([
+            {
+              phone_number: cleanPhone,
+              password: authPassword,
+              shop_name: shopNameInput.trim(),
+              subscription_status: 'active', // ให้ใช้งานได้ทันที 30 วัน
+              package_name: 'ทดลองใช้ฟรี 30 วัน',
+              expire_date: trialExpireDate.toISOString()
+            }
+          ]);
+
+        if (insertError) throw insertError;
+
+        localStorage.setItem('nj_is_logged_in', 'true');
+        localStorage.setItem('nj_phone', cleanPhone);
+        localStorage.setItem('shop_name', shopNameInput.trim());
+        setIsLoggedIn(true);
+      }
+
+      window.location.href = '/';
+    } catch (err: any) {
+      console.error('Auth Error:', err);
+      setAuthError(err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้งครับ');
+    } finally {
+      setLoading(false);
+    }
+  };
   const [incomeData, setIncomeData] = useState<any[]>([]);
   const [expenseData, setExpenseData] = useState<any[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
