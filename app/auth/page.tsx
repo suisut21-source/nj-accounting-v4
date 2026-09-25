@@ -47,7 +47,6 @@ export default function RootAuthPage() {
         
       } else {
         // --- ระบบสมัครสมาชิก (Sign Up) บันทึกลงตาราง stores ---
-        // 1. เช็กก่อนว่ามีเบอร์นี้ในระบบหรือยัง
         const { data: existingStore } = await supabase
           .from('stores')
           .select('phone_number')
@@ -58,7 +57,11 @@ export default function RootAuthPage() {
           throw new Error('เบอร์โทรศัพท์นี้ถูกใช้งานสมัครร้านค้าไปแล้วครับ');
         }
 
-        // 2. บันทึกข้อมูลร้านค้าใหม่ลงตาราง stores
+        // คำนวณวันหมดอายุทดลองใช้ฟรี 30 วันล่วงหน้า
+        const trialExpireDate = new Date();
+        trialExpireDate.setDate(trialExpireDate.getDate() + 30);
+
+        // 2. บันทึกข้อมูลร้านค้าใหม่ลงตาราง stores (พร้อมเซ็ต active และวันหมดอายุ 30 วัน)
         const { error: insertError } = await supabase
           .from('stores')
           .insert([
@@ -66,8 +69,9 @@ export default function RootAuthPage() {
               phone_number: cleanPhone,
               password: password,
               shop_name: shopName || 'ร้านค้าของฉัน',
-              subscription_status: 'pending', // รออนุมัติแพ็กเกจ
-              package_name: 'ทดลองใช้ฟรี'
+              subscription_status: 'active', // ให้ใช้งานได้ทันทีในช่วงทดลอง
+              package_name: 'ทดลองใช้ฟรี 30 วัน',
+              expire_date: trialExpireDate.toISOString() // บันทึกวันหมดอายุ
             }
           ]);
 
@@ -78,8 +82,8 @@ export default function RootAuthPage() {
         localStorage.setItem('nj_shop_name', shopName || 'ร้านค้าของฉัน');
       }
 
-      // พาไปหน้าตั้งค่าหรือหน้าหลักของระบบ
-      window.location.href = '/settings';
+      // พาไปหน้าหลักของระบบ
+      window.location.href = '/';
 
     } catch (err: any) {
       console.error('Auth Error:', err);
@@ -101,7 +105,7 @@ export default function RootAuthPage() {
             {isLogin ? 'ยินดีต้อนรับกลับครับพี่! 👋' : 'มาสร้างร้านค้ากัน! 🚀'}
           </h1>
           <p style={{ fontSize: '12px', color: '#4a5568', margin: 0, fontWeight: '500' }}>
-            {isLogin ? 'เข้าสู่ระบบด้วยเบอร์โทรศัพท์เพื่อจัดการร้านค้า' : 'กรอกเบอร์โทรและตั้งรหัสผ่านเพื่อเปิดบัญชีร้านค้า'}
+            {isLogin ? 'เข้าสู่ระบบด้วยเบอร์โทรศัพท์เพื่อจัดการร้านค้า' : 'กรอกเบอร์โทรและตั้งรหัสผ่านเพื่อเปิดบัญชีร้านค้า (ทดลองใช้ฟรี 30 วัน)'}
           </p>
         </div>
 
@@ -157,7 +161,7 @@ export default function RootAuthPage() {
             disabled={loading}
             style={{ width: '100%', padding: '14px', backgroundColor: '#BF7E46', color: '#ffffff', fontWeight: '900', fontSize: '14px', borderRadius: '12px', border: 'none', cursor: 'pointer', marginTop: '6px' }}
           >
-            {loading ? 'กำลังตรวจสอบ...' : isLogin ? 'เข้าสู่ระบบด้วยเบอร์โทร' : 'สมัครสมาชิก & เริ่มต้นใช้งาน 🐕'}
+            {loading ? 'กำลังตรวจสอบ...' : isLogin ? 'เข้าสู่ระบบด้วยเบอร์โทร' : 'สมัครสมาชิก & เริ่มต้นใช้งานฟรี 30 วัน 🐕'}
           </button>
         </form>
 

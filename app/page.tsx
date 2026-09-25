@@ -6,6 +6,7 @@ import {
   Bell, HelpCircle, Calendar, Plus, Upload, ArrowUpRight, ArrowDownLeft, 
   AlertCircle, ChevronRight, X, Camera, FileOutput, Calculator, ChevronDown, TrendingUp, BarChart3, AlertTriangle, Clock
 } from 'lucide-react';
+import { supabase } from './lib/supabase'; // 🐾 อย่าลืมเช็ก path ของ supabase ให้ตรงกันด้วยนะครับ
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -15,11 +16,38 @@ export default function Home() {
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
 
+  // 🐾 1. ระบบเช็กสิทธิ์และวันหมดอายุอัตโนมัติ (เพิ่มเข้ามาตรงนี้ครับ)
   useEffect(() => {
-    const savedAuth = localStorage.getItem('nj_is_logged_in');
-    if (savedAuth === 'true') {
-      setIsLoggedIn(true);
-    }
+    const checkSubscriptionExpire = async () => {
+      const savedAuth = localStorage.getItem('nj_is_logged_in');
+      const phone = localStorage.getItem('nj_phone');
+
+      if (savedAuth === 'true') {
+        setIsLoggedIn(true);
+
+        if (phone) {
+          // ดึงข้อมูลสถานะและวันหมดอายุจาก Supabase
+          const { data, error } = await supabase
+            .from('stores')
+            .select('subscription_status, expire_date')
+            .eq('phone_number', phone)
+            .single();
+
+          if (data) {
+            const now = new Date();
+            const expireDate = data.expire_date ? new Date(data.expire_date) : null;
+
+            // เงื่อนไขล็อก: ถ้าสถานะไม่ใช่ active หรือ วันนี้เกินวันหมดอายุที่กำหนดแล้ว
+            if (data.subscription_status !== 'active' || (expireDate && now > expireDate)) {
+              alert('⚠️ แพ็กเกจการใช้งานของคุณหมดอายุหรือรอการตรวจสอบ กรุณาชำระค่าบริการเพื่อใช้งานต่อครับ');
+              window.location.href = '/pricing'; // บังคับเด้งไปหน้าชำระเงินทันที!
+            }
+          }
+        }
+      }
+    };
+
+    checkSubscriptionExpire();
   }, []);
 
   const handleAuthSubmit = (e: React.FormEvent) => {
