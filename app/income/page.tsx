@@ -78,7 +78,6 @@ export default function IncomePage() {
   const isStoreFront = category === 'ขายหน้าร้าน (เงินสด/โอน)';
   const isThaiHelp = category === 'โครงการไทยช่วยไทย';
 
-  // ยอดเงินเข้าบัญชีตามประเภท (เดลิเวอรีหัก GP / ค่าบริการ / หนี้ เรียบร้อย)
   const instantDeposit = transfer; 
   const nextDayDeliveryDeposit = Math.max(0, delivery - gp - ads - loan);
 
@@ -87,7 +86,6 @@ export default function IncomePage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // กำหนดให้ยอดเงินที่เข้าบัญชี/กระเป๋าเงิน คือยอดสุทธิที่หักค่าใช้จ่ายแล้วอย่างถูกต้อง
     const finalAmount = isStoreFront ? transfer : isThaiHelp ? thaiGross : nextDayDeliveryDeposit;
 
     const newRecord = {
@@ -95,14 +93,15 @@ export default function IncomePage() {
       date,
       channel: category,
       category,
-      cash,
+      cashAmount: isStoreFront ? cash : 0, // บันทึกเฉพาะยอดเงินสดจริง
+      cash: isStoreFront ? cash : 0,
       transfer: isStoreFront ? transfer : 0,
       grossSales: totalStoreSales,
-      amount: finalAmount, // ยอดสุทธิเข้าบัญชีจริง
+      amount: finalAmount, 
       gpDeduction: isStoreFront ? 0 : gp,
       adDeduction: isStoreFront ? 0 : ads,
       debtDeduction: isStoreFront ? 0 : loan,
-      netTransfer: isStoreFront ? transfer : nextDayDeliveryDeposit,
+      netTransfer: isStoreFront ? transfer : nextDayDeliveryDeposit, // บันทึกเฉพาะยอดเงินโอนจริง (ถ้าไม่กรอกจะเป็น 0)
       bankAccount: selectedBank, 
       note
     };
@@ -111,18 +110,6 @@ export default function IncomePage() {
       const existingData = JSON.parse(localStorage.getItem('incomeTransactions') || '[]');
       const updatedData = [newRecord, ...existingData];
       localStorage.setItem('incomeTransactions', JSON.stringify(updatedData));
-
-      // บันทึกรายการลงในกระเป๋าเงิน (Wallet History) เพื่อให้ยอดเงินวิ่งเข้ากระเป๋าตามยอดสุทธิที่ถูกต้อง
-      const walletHistory = JSON.parse(localStorage.getItem('walletTransactions') || '[]');
-      const newWalletTx = {
-        id: Date.now(),
-        date: date + ' ' + new Date().toLocaleTimeString(),
-        type: 'เงินเข้า',
-        amount: finalAmount,
-        channel: selectedBank,
-        note: `รายรับจาก ${category} (${note || 'ปิดยอดขายประจำวัน'})`
-      };
-      localStorage.setItem('walletTransactions', JSON.stringify([newWalletTx, ...walletHistory]));
 
     } catch (error) {
       console.error('Failed to save to localStorage', error);

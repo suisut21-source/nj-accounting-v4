@@ -61,18 +61,15 @@ export default function ReportsPage() {
     const debtDeduction = Number(item.debtDeduction || item.debtAmount || 0);
     const deductionSum = gpDeduction + adDeduction + debtDeduction;
 
-    let cash = Number(item.cash || 0);
-    let transfer = Number(item.netTransfer || item.transfer || item.appTransfer || 0);
+    // ดึงค่าเงินสดและเงินโอนตามฟิลด์จริงที่บันทึกมาอย่างแม่นยำ ไม่ปัดตกมั่ว
+    let cash = Number(item.cashAmount ?? item.cash ?? 0);
+    let transfer = Number(item.netTransfer ?? item.transfer ?? item.appTransfer ?? 0);
 
-    if (cash === 0 && transfer === 0) {
-      if (item.channel && item.channel !== 'หน้าร้าน / ทั่วไป' && item.channel !== 'หน้าร้าน (เงินสด/โอน)') {
-        transfer = gross - deductionSum;
-      } else {
-        cash = gross;
-      }
-    } else {
-      if (item.channel && item.channel !== 'หน้าร้าน / ทั่วไป' && item.channel !== 'หน้าร้าน (เงินสด/โอน)' && transfer === 0) {
-        transfer = gross - deductionSum;
+    // ถ้ารายการเป็นเดลิเวอรีและไม่มีการระบุยอดโอน ให้ใช้ยอด gross หัก GP อัตโนมัติ
+    const channelName = String(item.channel || item.category || '');
+    if (channelName.includes('Grab') || channelName.includes('LINE MAN') || channelName.includes('Shopee')) {
+      if (transfer === 0) {
+        transfer = Math.max(0, gross - deductionSum);
       }
     }
 
@@ -106,18 +103,8 @@ export default function ReportsPage() {
         const ad = Number(item.adDeduction || item.adAmount || 0);
         const debt = Number(item.debtDeduction || item.debtAmount || 0);
         const totalDeduct = gp + ad + debt;
-        let cash = Number(item.cash || 0);
-        let netTransfer = Number(item.netTransfer || item.transfer || item.appTransfer || 0);
-
-        if (cash === 0 && netTransfer === 0) {
-          if (item.channel && item.channel !== 'หน้าร้าน / ทั่วไป' && item.channel !== 'หน้าร้าน (เงินสด/โอน)') {
-            netTransfer = gross - totalDeduct;
-          } else {
-            cash = gross;
-          }
-        } else if (netTransfer === 0 && item.channel && item.channel !== 'หน้าร้าน / ทั่วไป' && item.channel !== 'หน้าร้าน (เงินสด/โอน)') {
-          netTransfer = gross - totalDeduct;
-        }
+        let cash = Number(item.cashAmount ?? item.cash ?? 0);
+        let netTransfer = Number(item.netTransfer ?? item.transfer ?? item.appTransfer ?? 0);
 
         const channelName = item.channel || item.category || 'หน้าร้าน';
         const noteText = (item.note || '-').replace(/"/g, '""');
@@ -383,17 +370,14 @@ export default function ReportsPage() {
                   const debt = Number(item.debtDeduction || item.debtAmount || 0);
                   const totalDeduct = gp + ad + debt;
 
-                  let cash = Number(item.cash || 0);
-                  let netTransfer = Number(item.netTransfer || item.transfer || item.appTransfer || 0);
+                  let cash = Number(item.cashAmount ?? item.cash ?? 0);
+                  let netTransfer = Number(item.netTransfer ?? item.transfer ?? item.appTransfer ?? 0);
 
-                  if (cash === 0 && netTransfer === 0) {
-                    if (item.channel && item.channel !== 'หน้าร้าน / ทั่วไป' && item.channel !== 'หน้าร้าน (เงินสด/โอน)') {
-                      netTransfer = gross - totalDeduct;
-                    } else {
-                      cash = gross;
+                  const channelName = String(item.channel || item.category || '');
+                  if (channelName.includes('Grab') || channelName.includes('LINE MAN') || channelName.includes('Shopee')) {
+                    if (netTransfer === 0) {
+                      netTransfer = Math.max(0, gross - totalDeduct);
                     }
-                  } else if (netTransfer === 0 && item.channel && item.channel !== 'หน้าร้าน / ทั่วไป' && item.channel !== 'หน้าร้าน (เงินสด/โอน)') {
-                    netTransfer = gross - totalDeduct;
                   }
 
                   return (

@@ -7,15 +7,14 @@ export default function WalletPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 1. State สำหรับตั้งค่าบัญชี
   const [mainBank, setMainBank] = useState({
-    name: 'ไทยพาณิชย์',
+    name: 'กรุงไทย',
     accountNumber: '123-4-56789-0',
     type: 'ออมทรัพย์'
   });
 
   const [subBank, setSubBank] = useState({
-    name: 'กสิกรไทย',
+    name: 'ไทยพาณิชย์',
     accountNumber: '987-6-54321-0',
     type: 'ออมทรัพย์'
   });
@@ -26,7 +25,6 @@ export default function WalletPage() {
     cash: 0
   });
 
-  // 2. โหลดข้อมูลการตั้งค่าและประวัติธุรกรรม
   useEffect(() => {
     const savedMain = localStorage.getItem('wallet_main_bank');
     const savedSub = localStorage.getItem('wallet_sub_bank');
@@ -62,34 +60,56 @@ export default function WalletPage() {
     let cashTotal = 0;
 
     const formattedIncome = income.map((item: any) => {
-      const totalAmount = Number(item.netTransfer || item.netAmount || item.net || item.amount || item.displayAmount || 0);
-      
-      // รวมข้อความทุกฟิลด์เพื่อตรวจสอบว่าเป็นช่องทางไหน
-      const targetAccount = `${item.bankAccount || ''} ${item.channel || ''} ${item.paymentMethod || ''} ${item.note || ''} ${item.category || ''}`.toLowerCase();
+      // ดึงค่าจากทุกชื่อฟิลด์ที่เป็นไปได้ทั้งหมด เพื่อให้มั่นใจว่ายอดเงินสดไม่ตกหล่น
+      const cashAmt = Number(item.cashAmount || item.cash || item.cashInDrawer || item.cashBox || 0);
+      const transferAmt = Number(item.netTransfer || item.netAmount || item.transferAmount || item.bankTransfer || item.net || 0);
+      const generalAmt = Number(item.amount || item.displayAmount || item.totalAmount || 0);
 
-      // เช็กให้ชัดเจน: ถ้าระบุชื่อธนาคาร หรือคำว่าโอน ให้เข้าบัญชีธนาคารทันที
-      const isExplicitCash = targetAccount.includes('เงินสด') && !targetAccount.includes('โอน') && !targetAccount.includes('ไทยพาณิชย์') && !targetAccount.includes('กสิกรไทย') && !targetAccount.includes('กรุงไทย') && !targetAccount.includes('กรุงเทพ') && !targetAccount.includes('กรุงศรี');
-      const isSub = targetAccount.includes('สำรอง') || targetAccount.includes(currentSubName.toLowerCase());
-      const isBankTransfer = targetAccount.includes('ไทยพาณิชย์') || targetAccount.includes('กสิกรไทย') || targetAccount.includes('กรุงไทย') || targetAccount.includes('กรุงเทพ') || targetAccount.includes('กรุงศรี') || targetAccount.includes('โอน') || targetAccount.includes('bank') || targetAccount.includes('qr');
+      const targetText = `${item.bankAccount || ''} ${item.channel || ''} ${item.paymentMethod || ''} ${item.note || ''}`.toLowerCase();
+      const isSub = targetText.includes('สำรอง') || targetText.includes(currentSubName.toLowerCase());
 
-      if (isExplicitCash) {
-        cashTotal += totalAmount;
-      } else if (isSub) {
-        subTotal += totalAmount;
-      } else if (isBankTransfer || totalAmount > 0) {
-        // ถ้าเป็นชื่อธนาคารหรือไม่ได้ระบุว่าเป็นเงินสด ให้เข้าบัญชีหลัก
-        mainTotal += totalAmount;
-      } else {
-        cashTotal += totalAmount;
+      // ถ้ามีการระบุยอดเงินสดชัดเจน ให้บวกเข้า Cash Box ทันที
+      if (cashAmt > 0) {
+        cashTotal += cashAmt;
       }
 
-      const displayChan = item.bankAccount || item.channel || (isExplicitCash ? 'เงินสดหน้าร้าน' : `โอนเข้า (${currentMainName})`);
+      // ถ้ามีการระบุยอดโอน ให้เข้าบัญชีธนาคาร
+      if (transferAmt > 0) {
+        if (isSub) {
+          subTotal += transferAmt;
+        } else {
+          mainTotal += transferAmt;
+        }
+      }
+
+      // ถ้าบันทึกมาแบบรวมยอดใน amount ตัวเดียว ให้เช็กข้อความว่ามีคำว่าเงินสดหรือโอน
+      if (cashAmt === 0 && transferAmt === 0 && generalAmt > 0) {
+        if (targetText.includes('เงินสด') && !targetText.includes('โอน')) {
+          cashTotal += generalAmt;
+        } else if (isSub) {
+          subTotal += generalAmt;
+        } else {
+          mainTotal += generalAmt;
+        }
+      }
+
+      const totalDisplay = cashAmt > 0 || transferAmt > 0 ? (cashAmt + transferAmt) : generalAmt;
+
+      // จัดการแสดงชื่อช่องทางในตาราง
+      let displayChan = '';
+      if (cashAmt > 0 && transferAmt > 0) {
+        displayChan = `เงินสด ฿${cashAmt.toLocaleString()} / โอน ฿${transferAmt.toLocaleString()}`;
+      } else if (cashAmt > 0 || (generalAmt > 0 && targetText.includes('เงินสด') && !targetText.includes('โอน'))) {
+        displayChan = 'เงินสดหน้าร้าน (Cash Box)';
+      } else {
+        displayChan = item.bankAccount || item.channel || `โอนเข้า (${currentMainName})`;
+      }
 
       return {
         ...item,
         type: 'income',
         typeName: 'เงินเข้า',
-        displayAmount: totalAmount,
+        displayAmount: totalDisplay,
         channel: displayChan
       };
     });
@@ -98,7 +118,7 @@ export default function WalletPage() {
       const amt = Number(item.amount || 0);
       const targetAccount = `${item.paymentMethod || ''} ${item.channel || ''} ${item.vendor || ''}`.toLowerCase();
 
-      if (targetAccount.includes('เงินสด') && !targetAccount.includes('โอน')) {
+      if (targetAccount.includes('เงินสด') || targetAccount.includes('cash')) {
         cashTotal -= amt;
       } else if (targetAccount.includes('สำรอง') || targetAccount.includes(currentSubName.toLowerCase())) {
         subTotal -= amt;

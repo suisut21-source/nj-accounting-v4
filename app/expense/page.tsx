@@ -42,6 +42,31 @@ export default function ExpensePage() {
     }
   }, []);
 
+  // ฟังก์ชันช่วยกำหนดสีตามชื่อธนาคาร
+  const getBankTheme = (bankName: string, isSelected: boolean) => {
+    if (!isSelected) {
+      return 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100';
+    }
+
+    if (bankName.includes('กสิกรไทย') || bankName.includes('KBANK')) {
+      return 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-200';
+    } else if (bankName.includes('ไทยพาณิชย์') || bankName.includes('SCB')) {
+      return 'bg-purple-700 text-white border-purple-700 shadow-sm shadow-purple-200';
+    } else if (bankName.includes('กรุงเทพ') || bankName.includes('BBL')) {
+      return 'bg-blue-900 text-white border-blue-900 shadow-sm shadow-blue-200';
+    } else if (bankName.includes('กรุงไทย') || bankName.includes('KTB')) {
+      return 'bg-cyan-600 text-white border-cyan-600 shadow-sm shadow-cyan-200';
+    } else if (bankName.includes('กรุงศรี') || bankName.includes('BAY')) {
+      return 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-200';
+    } else if (bankName.includes('ทหารไทยธนชาต') || bankName.includes('TTB')) {
+      return 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-200';
+    } else if (bankName.includes('ออมสิน') || bankName.includes('GSB')) {
+      return 'bg-pink-600 text-white border-pink-600 shadow-sm shadow-pink-200';
+    } else {
+      return 'bg-rose-600 text-white border-rose-600 shadow-sm shadow-rose-200';
+    }
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -241,23 +266,19 @@ export default function ExpensePage() {
                         type="button"
                         onClick={() => setFormData({ ...formData, bankAccount: mainBankName })}
                         className={`py-3 px-4 rounded-2xl text-xs sm:text-sm font-bold border transition flex items-center justify-center gap-2 ${
-                          formData.bankAccount === mainBankName || !formData.bankAccount
-                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                            : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100'
+                          getBankTheme(mainBankName, formData.bankAccount === mainBankName || !formData.bankAccount)
                         }`}
                       >
-                        🟢 บัญชีหลัก ({mainBankName})
+                         บัญชีหลัก ({mainBankName})
                       </button>
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, bankAccount: subBankName })}
                         className={`py-3 px-4 rounded-2xl text-xs sm:text-sm font-bold border transition flex items-center justify-center gap-2 ${
-                          formData.bankAccount === subBankName
-                            ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                            : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100'
+                          getBankTheme(subBankName, formData.bankAccount === subBankName)
                         }`}
                       >
-                        🟣 บัญชีสำรอง ({subBankName})
+                         บัญชีสำรอง ({subBankName})
                       </button>
                     </div>
                   </div>
