@@ -61,7 +61,7 @@ export default function RootAuthPage() {
         const trialExpireDate = new Date();
         trialExpireDate.setDate(trialExpireDate.getDate() + 30);
 
-        // 2. บันทึกข้อมูลร้านค้าใหม่ลงตาราง stores (พร้อมเซ็ต active และวันหมดอายุ 30 วัน)
+        // 2. บันทึกข้อมูลร้านค้าใหม่ลงตาราง stores (ตั้งค่าสถานะเป็น pending เพื่อรอแอดมินอนุมัติ)
         const { error: insertError } = await supabase
           .from('stores')
           .insert([
@@ -69,7 +69,7 @@ export default function RootAuthPage() {
               phone_number: cleanPhone,
               password: password,
               shop_name: shopName || 'ร้านค้าของฉัน',
-              subscription_status: 'active', // ให้ใช้งานได้ทันทีในช่วงทดลอง
+              subscription_status: 'pending', // เปลี่ยนเป็นรอตรวจสอบ เพื่อให้แอดมินได้กดอนุมัติ
               package_name: 'ทดลองใช้ฟรี 30 วัน',
               expire_date: trialExpireDate.toISOString() // บันทึกวันหมดอายุ
             }
