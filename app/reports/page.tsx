@@ -61,13 +61,13 @@ export default function ReportsPage() {
     const debtDeduction = Number(item.debtDeduction || item.debtAmount || 0);
     const deductionSum = gpDeduction + adDeduction + debtDeduction;
 
-    // ดึงค่าเงินสดและเงินโอนตามฟิลด์จริงที่บันทึกมาอย่างแม่นยำ ไม่ปัดตกมั่ว
     let cash = Number(item.cashAmount ?? item.cash ?? 0);
     let transfer = Number(item.netTransfer ?? item.transfer ?? item.appTransfer ?? 0);
 
-    // ถ้ารายการเป็นเดลิเวอรีและไม่มีการระบุยอดโอน ให้ใช้ยอด gross หัก GP อัตโนมัติ
     const channelName = String(item.channel || item.category || '');
-    if (channelName.includes('Grab') || channelName.includes('LINE MAN') || channelName.includes('Shopee')) {
+
+    // ถ้าเป็นเดลิเวอรี หรือ โครงการไทยช่วยไทย ให้ยอดวิ่งเข้าช่องเงินโอนอัตโนมัติ
+    if (channelName.includes('Grab') || channelName.includes('LINE MAN') || channelName.includes('Shopee') || channelName.includes('ไทยช่วยไทย')) {
       if (transfer === 0) {
         transfer = Math.max(0, gross - deductionSum);
       }
@@ -106,7 +106,13 @@ export default function ReportsPage() {
         let cash = Number(item.cashAmount ?? item.cash ?? 0);
         let netTransfer = Number(item.netTransfer ?? item.transfer ?? item.appTransfer ?? 0);
 
-        const channelName = item.channel || item.category || 'หน้าร้าน';
+        const channelName = String(item.channel || item.category || '');
+        if (channelName.includes('Grab') || channelName.includes('LINE MAN') || channelName.includes('Shopee') || channelName.includes('ไทยช่วยไทย')) {
+          if (netTransfer === 0) {
+            netTransfer = Math.max(0, gross - totalDeduct);
+          }
+        }
+
         const noteText = (item.note || '-').replace(/"/g, '""');
         csvContent += `"${item.date || '-'}","${channelName}",${gross},${totalDeduct},${cash},${netTransfer},"${noteText}"\n`;
       });
@@ -374,7 +380,7 @@ export default function ReportsPage() {
                   let netTransfer = Number(item.netTransfer ?? item.transfer ?? item.appTransfer ?? 0);
 
                   const channelName = String(item.channel || item.category || '');
-                  if (channelName.includes('Grab') || channelName.includes('LINE MAN') || channelName.includes('Shopee')) {
+                  if (channelName.includes('Grab') || channelName.includes('LINE MAN') || channelName.includes('Shopee') || channelName.includes('ไทยช่วยไทย')) {
                     if (netTransfer === 0) {
                       netTransfer = Math.max(0, gross - totalDeduct);
                     }
@@ -388,6 +394,7 @@ export default function ReportsPage() {
                           item.channel === 'LINE MAN' ? 'bg-emerald-100 text-emerald-800' :
                           item.channel === 'Grab' || item.channel === 'GrabFood' ? 'bg-green-100 text-green-800' :
                           item.channel === 'ShopeeFood' ? 'bg-orange-100 text-orange-800' :
+                          item.channel === 'โครงการไทยช่วยไทย' ? 'bg-indigo-100 text-indigo-800 font-bold' :
                           'bg-slate-100 text-slate-700'
                         }`}>
                           {item.channel || item.category || 'หน้าร้าน'}
