@@ -13,52 +13,72 @@ export default function RootAuthPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
 
-  const formatEmailFromPhone = (phoneNumber: string) => {
-    const cleanPhone = phoneNumber.replace(/\D/g, '');
-    return `${cleanPhone}@nj-accounting.com`;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMessage('');
 
-    if (phone.replace(/\D/g, '').length !== 10) {
+    const cleanPhone = phone.replace(/\D/g, '');
+
+    if (cleanPhone.length !== 10) {
       setErrorMessage('กรุณากรอกเบอร์โทรศัพท์มือถือให้ครบ 10 หลักครับ');
       setLoading(false);
       return;
     }
 
-    const authEmail = formatEmailFromPhone(phone);
-
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: authEmail,
-          password,
-        });
-        if (error) throw error;
-      } else {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: authEmail,
-          password,
-          options: {
-            data: {
-              shop_name: shopName,
-              phone: phone.replace(/\D/g, ''),
-            },
-          },
-        });
-        if (signUpError) throw signUpError;
+        // --- ระบบเข้าสู่ระบบ (Login) เช็กจากตาราง stores ---
+        const { data, error } = await supabase
+          .from('stores')
+          .select('*')
+          .eq('phone_number', cleanPhone)
+          .eq('password', password)
+          .single();
 
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: authEmail,
-          password,
-        });
-        if (signInError) throw signInError;
+        if (error || !data) {
+          throw new Error('เบอร์โทรศัพท์หรือรหัสผ่านไม่ถูกต้องครับ');
+        }
+
+        // บันทึกสถานะล็อกอินและข้อมูลร้านค้าลงเครื่อง
+        localStorage.setItem('nj_is_logged_in', 'true');
+        localStorage.setItem('nj_phone', cleanPhone);
+        localStorage.setItem('nj_shop_name', data.shop_name || 'ร้านค้าของฉัน');
+        
+      } else {
+        // --- ระบบสมัครสมาชิก (Sign Up) บันทึกลงตาราง stores ---
+        // 1. เช็กก่อนว่ามีเบอร์นี้ในระบบหรือยัง
+        const { data: existingStore } = await supabase
+          .from('stores')
+          .select('phone_number')
+          .eq('phone_number', cleanPhone)
+          .single();
+
+        if (existingStore) {
+          throw new Error('เบอร์โทรศัพท์นี้ถูกใช้งานสมัครร้านค้าไปแล้วครับ');
+        }
+
+        // 2. บันทึกข้อมูลร้านค้าใหม่ลงตาราง stores
+        const { error: insertError } = await supabase
+          .from('stores')
+          .insert([
+            {
+              phone_number: cleanPhone,
+              password: password,
+              shop_name: shopName || 'ร้านค้าของฉัน',
+              subscription_status: 'pending', // รออนุมัติแพ็กเกจ
+              package_name: 'ทดลองใช้ฟรี'
+            }
+          ]);
+
+        if (insertError) throw insertError;
+
+        localStorage.setItem('nj_is_logged_in', 'true');
+        localStorage.setItem('nj_phone', cleanPhone);
+        localStorage.setItem('nj_shop_name', shopName || 'ร้านค้าของฉัน');
       }
 
-      localStorage.setItem('nj_is_logged_in', 'true');
+      // พาไปหน้าตั้งค่าหรือหน้าหลักของระบบ
       window.location.href = '/settings';
 
     } catch (err: any) {
