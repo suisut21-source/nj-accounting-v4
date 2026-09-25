@@ -66,11 +66,12 @@ export default function WalletPage() {
       const cashInDrawer = Number(item.cashInDrawer || 0);
       const bankTransfer = Number(item.bankTransfer || 0);
       
-      const targetAccount = `${item.bankAccount || ''} ${item.channel || ''} ${item.paymentMethod || ''} ${item.note || ''}`.toLowerCase();
+      // รวมข้อความทุกฟิลด์เพื่อเช็กว่าเป็นช่องทางไหน
+      const targetAccount = `${item.bankAccount || ''} ${item.channel || ''} ${item.paymentMethod || ''} ${item.note || ''} ${item.category || ''}`.toLowerCase();
 
-      const isCash = targetAccount.includes('เงินสด') || targetAccount.includes('cash');
-      const isSub = targetAccount.includes('บัญชีสำรอง') || targetAccount.includes(currentSubName.toLowerCase());
-      const isMain = targetAccount.includes('บัญชีหลัก') || targetAccount.includes(currentMainName.toLowerCase());
+      const isCash = targetAccount.includes('เงินสด') || targetAccount.includes('cash') || targetAccount.includes('หน้าร้าน');
+      const isSub = targetAccount.includes('สำรอง') || targetAccount.includes(currentSubName.toLowerCase());
+      const isMain = targetAccount.includes('หลัก') || targetAccount.includes(currentMainName.toLowerCase()) || targetAccount.includes('กรุงไทย') || targetAccount.includes('ไทยพาณิชย์') || targetAccount.includes('กสิกรไทย') || targetAccount.includes('กรุงเทพ') || targetAccount.includes('กรุงศรี');
 
       if (cashInDrawer > 0) {
         cashTotal += cashInDrawer;
@@ -86,6 +87,7 @@ export default function WalletPage() {
         } else if (isSub) {
           subTotal += totalAmount;
         } else {
+          // ถ้าไม่ใช่เงินสดชัดเจน ให้เข้าบัญชีหลักตามค่าเริ่มต้น
           mainTotal += totalAmount;
         }
       } else {
@@ -115,7 +117,7 @@ export default function WalletPage() {
 
       if (targetAccount.includes('เงินสด') || targetAccount.includes('cash')) {
         cashTotal -= amt;
-      } else if (targetAccount.includes('บัญชีสำรอง') || targetAccount.includes(currentSubName.toLowerCase())) {
+      } else if (targetAccount.includes('สำรอง') || targetAccount.includes(currentSubName.toLowerCase())) {
         subTotal -= amt;
       } else {
         mainTotal -= amt;
@@ -136,11 +138,11 @@ export default function WalletPage() {
       const toAcc = (item.toAccount || '').toLowerCase();
 
       if (fromAcc.includes('เงินสด')) cashTotal -= amt;
-      else if (fromAcc.includes('บัญชีสำรอง') || fromAcc.includes(currentSubName.toLowerCase())) subTotal -= amt;
+      else if (fromAcc.includes('สำรอง') || fromAcc.includes(currentSubName.toLowerCase())) subTotal -= amt;
       else mainTotal -= amt;
 
       if (toAcc.includes('เงินสด')) cashTotal += amt;
-      else if (toAcc.includes('บัญชีสำรอง') || toAcc.includes(currentSubName.toLowerCase())) subTotal += amt;
+      else if (toAcc.includes('สำรอง') || toAcc.includes(currentSubName.toLowerCase())) subTotal += amt;
       else mainTotal += amt;
 
       return {
@@ -183,25 +185,24 @@ export default function WalletPage() {
     localStorage.setItem('wallet_sub_bank', JSON.stringify(updated));
   };
 
-  // ฟังก์ชันเลือกสีตามชื่อธนาคารหลัก
   const getMainBankTheme = (name: string) => {
     switch (name) {
-      case 'ไทยพาณิชย์': return { border: '#7b1fa2', text: '#7b1fa2', bg: '#f3e8ff' }; // ม่วง SCB
-      case 'กสิกรไทย': return { border: '#00a859', text: '#00874a', bg: '#e6f4ea' }; // เขียว KBank
-      case 'กรุงไทย': return { border: '#006699', text: '#006699', bg: '#e0f2fe' }; // ฟ้า KTB
-      case 'กรุงเทพ': return { border: '#1e3a8a', text: '#1e3a8a', bg: '#e0e7ff' }; // น้ำเงิน BBL
-      case 'กรุงศรีอยุธยา': return { border: '#d97706', text: '#b45309', bg: '#fef3c7' }; // เหลือง/ส้ม BAY
+      case 'ไทยพาณิชย์': return { border: '#7b1fa2', text: '#7b1fa2', bg: '#f3e8ff' };
+      case 'กสิกรไทย': return { border: '#00a859', text: '#00874a', bg: '#e6f4ea' };
+      case 'กรุงไทย': return { border: '#006699', text: '#006699', bg: '#e0f2fe' };
+      case 'กรุงเทพ': return { border: '#1e3a8a', text: '#1e3a8a', bg: '#e0e7ff' };
+      case 'กรุงศรีอยุธยา': return { border: '#d97706', text: '#b45309', bg: '#fef3c7' };
       default: return { border: '#BF7E46', text: '#BF7E46', bg: '#FBEDD6' };
     }
   };
 
   const getSubBankTheme = (name: string) => {
     switch (name) {
-      case 'กสิกรไทย': return { border: '#00a859', text: '#00874a', bg: '#e6f4ea' }; // เขียว KBank
-      case 'ไทยพาณิชย์': return { border: '#7b1fa2', text: '#7b1fa2', bg: '#f3e8ff' }; // ม่วง SCB
-      case 'กรุงไทย': return { border: '#006699', text: '#006699', bg: '#e0f2fe' }; // ฟ้า KTB
-      case 'กรุงเทพ': return { border: '#1e3a8a', text: '#1e3a8a', bg: '#e0e7ff' }; // น้ำเงิน BBL
-      case 'กรุงศรีอยุธยา': return { border: '#d97706', text: '#b45309', bg: '#fef3c7' }; // เหลือง/ส้ม BAY
+      case 'กสิกรไทย': return { border: '#00a859', text: '#00874a', bg: '#e6f4ea' };
+      case 'ไทยพาณิชย์': return { border: '#7b1fa2', text: '#7b1fa2', bg: '#f3e8ff' };
+      case 'กรุงไทย': return { border: '#006699', text: '#006699', bg: '#e0f2fe' };
+      case 'กรุงเทพ': return { border: '#1e3a8a', text: '#1e3a8a', bg: '#e0e7ff' };
+      case 'กรุงศรีอยุธยา': return { border: '#d97706', text: '#b45309', bg: '#fef3c7' };
       default: return { border: '#97C6E0', text: '#334155', bg: '#f1f5f9' };
     }
   };
@@ -246,7 +247,7 @@ export default function WalletPage() {
       {/* Account Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         
-        {/* Card 1: บัญชีหลัก (ปรับสีตามธนาคาร) */}
+        {/* Card 1: บัญชีหลัก */}
         <div className="bg-white p-6 rounded-[2.5rem] border-[3px] shadow-sm space-y-4 relative overflow-hidden transition hover:shadow-md" style={{ borderColor: mainTheme.border }}>
           <div className="flex items-center justify-between">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-md text-white" style={{ backgroundColor: mainTheme.border }}>
@@ -288,7 +289,7 @@ export default function WalletPage() {
           </div>
         </div>
 
-        {/* Card 2: บัญชีสำรอง (ปรับสีตามธนาคาร) */}
+        {/* Card 2: บัญชีสำรอง */}
         <div className="bg-white p-6 rounded-[2.5rem] border-[3px] shadow-sm space-y-4 relative overflow-hidden transition hover:shadow-md" style={{ borderColor: subTheme.border }}>
           <div className="flex items-center justify-between">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-md text-white" style={{ backgroundColor: subTheme.border }}>
