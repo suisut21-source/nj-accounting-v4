@@ -69,7 +69,7 @@ export default function RootAuthPage() {
               phone_number: cleanPhone,
               password: password,
               shop_name: shopName || 'ร้านค้าของฉัน',
-              subscription_status: 'pending', // เปลี่ยนเป็นรอตรวจสอบ เพื่อให้แอดมินได้กดอนุมัติ
+              subscription_status: 'pending', // เปลี่ยนเป็น pending เพื่อรอแอดมินกดอนุมัติ
               package_name: 'ทดลองใช้ฟรี 30 วัน',
               expire_date: trialExpireDate.toISOString() // บันทึกวันหมดอายุ
             }
