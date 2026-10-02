@@ -1,9 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 
-export default function LineCallbackPage() {
+function LineCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [statusMessage, setStatusMessage] = useState('กำลังเชื่อมต่อและยืนยันตัวตนกับ LINE...');
@@ -24,7 +24,6 @@ export default function LineCallbackPage() {
       try {
         setStatusMessage('กำลังตรวจสอบข้อมูลบัญชีร้านค้า...');
 
-        // ส่ง code ไปที่ API เพื่อแลก LINE User ID และ Profile
         const response = await fetch('/api/line-login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -39,7 +38,6 @@ export default function LineCallbackPage() {
 
         const { lineUserId, displayName } = result;
 
-        // เช็กใน Supabase ว่า LINE UID นี้เคยผูกกับร้านค้าหรือยัง
         const { data: existingStore } = await supabase
           .from('stores')
           .select('*')
@@ -47,7 +45,6 @@ export default function LineCallbackPage() {
           .single();
 
         if (existingStore) {
-          // --- กรณีมีบัญชีอยู่แล้ว เข้าสู่ระบบทันที ---
           localStorage.setItem('nj_is_logged_in', 'true');
           localStorage.setItem('nj_line_user_id', lineUserId);
           localStorage.setItem('nj_shop_name', existingStore.shop_name || 'ร้านค้าของฉัน');
@@ -56,11 +53,10 @@ export default function LineCallbackPage() {
           setTimeout(() => { window.location.href = '/'; }, 1000);
 
         } else {
-          // --- กรณีสมัครใช้งานครั้งแรก สร้างบัญชีร้านค้าให้อัตโนมัติ ---
           const trialExpireDate = new Date();
           trialExpireDate.setDate(trialExpireDate.getDate() + 30);
 
-          const newShopName = displayName ? `ร้านของ ${displayName}` : 'ร้านค้าของฉัน';
+          const newShopName = displayName ? ร้านของ ${displayName} : 'ร้านค้าของฉัน';
 
           const { error: insertError } = await supabase
             .from('stores')
@@ -102,5 +98,13 @@ export default function LineCallbackPage() {
         <p style={{ fontSize: '13px', color: '#4a5568', margin: 0, fontWeight: '500', lineHeight: '1.5' }}>{statusMessage}</p>
       </div>
     </div>
+  );
+}
+
+export default function LineCallbackPage() {
+  return (
+    <Suspense fallback={<div style={{ textAlign: 'center', padding: '50px' }}>กำลังโหลด...</div>}>
+      <LineCallbackContent />
+    </Suspense>
   );
 }
