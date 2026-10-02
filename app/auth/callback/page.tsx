@@ -60,7 +60,7 @@ export default function LineCallbackPage() {
           const trialExpireDate = new Date();
           trialExpireDate.setDate(trialExpireDate.getDate() + 30);
 
-          const newShopName = displayName ? ร้านของ ${displayName} : 'ร้านค้าของฉัน';
+          const newShopName = displayName ? `ร้านของ ${displayName}` : 'ร้านค้าของฉัน';
 
           const { error: insertError } = await supabase
             .from('stores')
