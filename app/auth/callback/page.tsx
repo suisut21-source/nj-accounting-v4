@@ -101,6 +101,7 @@ function LineCallbackContent() {
   );
 }
 
+
 export default function LineCallbackPage() {
   return (
     <Suspense fallback={<div style={{ textAlign: 'center', padding: '50px' }}>กำลังโหลด...</div>}>
