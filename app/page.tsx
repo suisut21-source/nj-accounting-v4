@@ -117,7 +117,7 @@ export default function Home() {
               phone_number: cleanPhone,
               password: authPassword,
               shop_name: shopNameInput.trim(),
-              subscription_status: 'active', // ให้ใช้งานได้ทันที 30 วัน
+              subscription_status: 'pending', // เปลี่ยนเป็น pending เพื่อรอแอดมินกดอนุมัติ
               package_name: 'ทดลองใช้ฟรี 30 วัน',
               expire_date: trialExpireDate.toISOString()
             }
