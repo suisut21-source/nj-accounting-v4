@@ -1,17 +1,48 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   FiHome, FiArrowDownLeft, FiArrowUpRight, FiRefreshCw, 
   FiTruck, FiFileText, FiPrinter, FiBarChart2, FiSettings,
   FiMenu, FiX, FiPackage
 } from 'react-icons/fi';
+import { supabase } from '../lib/supabase';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false); // สถานะเปิด-ปิดเมนูบนมือถือ
+
+  // 🔒 เช็กสถานะการอนุมัติจาก Supabase แบบเรียลไทม์
+  useEffect(() => {
+    const checkStoreStatus = async () => {
+      // ถ้าอยู่หน้า auth หรือหน้า pricing อยู่แล้ว ไม่ต้องเช็กวนลูปซ้ำ
+      if (pathname === '/auth' || pathname === '/pricing') return;
+
+      const phone = localStorage.getItem('nj_phone');
+      if (!phone) return;
+
+      const { data, error } = await supabase
+        .from('stores')
+        .select('subscription_status, expire_date')
+        .eq('phone_number', phone)
+        .single();
+
+      if (!error && data) {
+        const now = new Date();
+        const expireDate = data.expire_date ? new Date(data.expire_date) : null;
+
+        // ถ้าสถานะไม่ใช่ active หรือหมดอายุแล้ว ให้ดีดไปหน้า /pricing ทันที
+        if (data.subscription_status !== 'active' || (expireDate && now > expireDate)) {
+          router.push('/pricing');
+        }
+      }
+    };
+
+    checkStoreStatus();
+  }, [pathname, router]);
 
   // 🔒 ถ้าตอนนี้อยู่หน้า /auth ให้ซ่อน Sidebar ทันที ไม่ให้กดข้ามไปไหนได้
   if (pathname === '/auth') {
