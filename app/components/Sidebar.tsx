@@ -99,11 +99,11 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* 📱 ปุ่มกดเปิด-ปิดเมนูสำหรับหน้าจอมือถือ (แสดงเฉพาะจอเล็ก) */}
+       {/* 📱 ปุ่มกดเปิด-ปิดเมนูสำหรับหน้าจอมือถือ (แสดงเฉพาะจอเล็ก) */}
       <div className="md:hidden flex items-center justify-between bg-white px-4 py-3 border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-lg shadow-sm" style={{ backgroundColor: '#CC5500' }}>
-            🐕
+          <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-sm border border-amber-200">
+            <img src="/logo.jpg" alt="NJ Accounting Logo" className="w-full h-full object-cover" />
           </div>
           <span className="font-black text-sm" style={{ color: '#CC5500' }}>NJ Accounting</span>
         </div>
