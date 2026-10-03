@@ -38,16 +38,15 @@ export default function AdminPricingPage() {
     fetchStores();
   }, []);
 
-  // ฟังก์ชันกดอนุมัติสิทธิ์แพ็กเกจให้ร้านค้า
-  const handleApprove = async (phone_number: string, shop_name: string) => {
-    if (confirm(`คุณต้องการอนุมัติแพ็กเกจให้กับร้าน "${shop_name || phone_number}" ใช่หรือไม่?`)) {
+  // ฟังก์ชันกดอนุมัติสิทธิ์แพ็กเกจให้ร้านค้า (อ้างอิงด้วย id)
+  const handleApprove = async (id: string, shop_name: string) => {
+    if (confirm(`คุณต้องการอนุมัติแพ็กเกจให้กับร้าน "${shop_name || 'ร้านค้า'}" ใช่หรือไม่?`)) {
       const { error } = await supabase
         .from('stores')
         .update({ 
-          subscription_status: 'active', 
-          package_name: 'แพ็กเกจพรีเมียม (ใช้งานได้เต็มระบบ)' 
+          subscription_status: 'active'
         })
-        .eq('phone_number', phone_number);
+        .eq('id', id);
 
       if (error) {
         alert('⚠️ เกิดข้อผิดพลาดในการอนุมัติ กรุณาลองใหม่อีกครั้ง');
@@ -59,18 +58,19 @@ export default function AdminPricingPage() {
     }
   };
 
-  // ฟังก์ชันลบร้านค้าออกจากระบบ
-  const handleDelete = async (phone_number: string, shop_name: string) => {
-    if (confirm(`ต้องการลบบัญชีร้าน "${shop_name || phone_number}" ออกจากระบบใช่หรือไม่?`)) {
+  // ฟังก์ชันลบร้านค้าออกจากระบบ (อ้างอิงด้วย id)
+  const handleDelete = async (id: string, shop_name: string) => {
+    if (confirm(`ต้องการลบบัญชีร้าน "${shop_name || 'ร้านค้า'}" ออกจากระบบใช่หรือไม่?`)) {
       const { error } = await supabase
         .from('stores')
         .delete()
-        .eq('phone_number', phone_number);
+        .eq('id', id);
 
       if (error) {
         alert('⚠️ เกิดข้อผิดพลาดในการลบข้อมูล');
         console.error(error);
       } else {
+        alert('ลบข้อมูลร้านค้าเรียบร้อยแล้วครับ');
         fetchStores(); // รีเฟรชข้อมูลใหม่
       }
     }
@@ -135,9 +135,9 @@ export default function AdminPricingPage() {
                 
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400">📅 สมัครเมื่อ: {new Date(store.created_at).toLocaleString('th-TH')}</span>
+                    <span className="text-[10px] font-bold text-slate-400">📅 สมัครเมื่อ: {store.created_at ? new Date(store.created_at).toLocaleString('th-TH') : '-'}</span>
                     <h3 className="font-black text-base text-slate-900 mt-0.5">🏪 {store.shop_name || 'ร้านค้าไม่มีชื่อ'}</h3>
-                    <p className="text-xs text-slate-600 font-medium">📞 โทร: {store.phone_number}</p>
+                    <p className="text-xs text-slate-600 font-medium">📞 โทร: {store.phone_number || 'ยังไม่ได้ระบุ'}</p>
                   </div>
                   <span className={`text-[11px] font-black px-3 py-1 rounded-full ${
                     store.subscription_status === 'active' 
@@ -157,14 +157,14 @@ export default function AdminPricingPage() {
                 <div className="flex items-center gap-3 pt-2">
                   {store.subscription_status !== 'active' && (
                     <button
-                      onClick={() => handleApprove(store.phone_number, store.shop_name)}
+                      onClick={() => handleApprove(store.id, store.shop_name)}
                       className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-2xl transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <CheckCircle className="w-4 h-4" /> อนุมัติแพ็คเกจ
                     </button>
                   )}
                   <button
-                    onClick={() => handleDelete(store.phone_number, store.shop_name)}
+                    onClick={() => handleDelete(store.id, store.shop_name)}
                     className="py-3 px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-2xl transition flex items-center justify-center gap-1 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" /> ลบ
