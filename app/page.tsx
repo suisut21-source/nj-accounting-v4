@@ -51,94 +51,16 @@ export default function Home() {
     checkSubscriptionExpire();
   }, []);
 
-  const handleAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError('');
+  // 🐾 ฟังก์ชันเข้าสู่ระบบด้วย LINE OAuth2
+  const handleLineLogin = () => {
     setLoading(true);
-
-    const cleanPhone = authPhone.replace(/\D/g, '');
-    if (cleanPhone.length !== 10) {
-      setAuthError('กรุณากรอกเบอร์โทรศัพท์มือถือให้ครบ 10 หลักครับ');
-      setLoading(false);
-      return;
-    }
-
-    if (authPassword.length < 6) {
-      setAuthError('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรครับ');
-      setLoading(false);
-      return;
-    }
-
-    if (!isLoginMode && !shopNameInput.trim()) {
-      setAuthError('กรุณากรอกชื่อร้านค้าของคุณครับ');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      if (isLoginMode) {
-        // --- เข้าสู่ระบบ เช็กจาก Supabase ---
-        const { data, error } = await supabase
-          .from('stores')
-          .select('*')
-          .eq('phone_number', cleanPhone)
-          .eq('password', authPassword)
-          .single();
-
-        if (error || !data) {
-          throw new Error('เบอร์โทรศัพท์หรือรหัสผ่านไม่ถูกต้องครับ');
-        }
-
-        localStorage.setItem('nj_is_logged_in', 'true');
-        localStorage.setItem('nj_phone', cleanPhone);
-        localStorage.setItem('shop_name', data.shop_name || 'ร้านค้าของฉัน');
-        setIsLoggedIn(true);
-
-      } else {
-        // --- สมัครสมาชิกใหม่ บันทึกลงตาราง stores บน Supabase ทันที ---
-        const { data: existingStore } = await supabase
-          .from('stores')
-          .select('phone_number')
-          .eq('phone_number', cleanPhone)
-          .single();
-
-        if (existingStore) {
-          throw new Error('เบอร์โทรศัพท์นี้ถูกใช้งานสมัครร้านค้าไปแล้วครับ');
-        }
-
-        // คำนวณวันหมดอายุทดลองใช้ฟรี 30 วัน
-        const trialExpireDate = new Date();
-        trialExpireDate.setDate(trialExpireDate.getDate() + 30);
-
-        const { error: insertError } = await supabase
-          .from('stores')
-          .insert([
-            {
-              phone_number: cleanPhone,
-              password: authPassword,
-              shop_name: shopNameInput.trim(),
-              subscription_status: 'pending', // เปลี่ยนเป็น pending เพื่อรอแอดมินกดอนุมัติ
-              package_name: 'ทดลองใช้ฟรี 30 วัน',
-              expire_date: trialExpireDate.toISOString()
-            }
-          ]);
-
-        if (insertError) throw insertError;
-
-        localStorage.setItem('nj_is_logged_in', 'true');
-        localStorage.setItem('nj_phone', cleanPhone);
-        localStorage.setItem('shop_name', shopNameInput.trim());
-        setIsLoggedIn(true);
-      }
-
-      window.location.href = '/';
-    } catch (err: any) {
-      console.error('Auth Error:', err);
-      setAuthError(err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้งครับ');
-    } finally {
-      setLoading(false);
-    }
+    const channelId = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2006571253';
+    const redirectUri = encodeURIComponent(window.location.origin + '/auth/callback');
+    const state = Math.random().toString(36).substring(7);
+    
+    window.location.href = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=\({channelId}&redirect_uri=\){redirectUri}&state=${state}&scope=profile%20openid%20email`;
   };
+
   const [incomeData, setIncomeData] = useState<any[]>([]);
   const [expenseData, setExpenseData] = useState<any[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
@@ -283,110 +205,47 @@ export default function Home() {
   const diffTimePnd90 = targetPnd90.getTime() - today.getTime();
   const diffDaysPnd90 = Math.ceil(diffTimePnd90 / (1000 * 60 * 60 * 24));
 
-  // 🛑 หน้าล็อกอิน / สมัครสมาชิก (ทำงานสมบูรณ์ สลับโหมดได้ทันที)
+  /// 🛑 หน้าล็อกอินด้วย LINE
   if (!isLoggedIn) {
     return (
       <div style={{ minHeight: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#faf7f2', margin: 0, padding: '20px', boxSizing: 'border-box', position: 'fixed', top: 0, left: 0, zIndex: 9999, overflowY: 'auto' }}>
-        <div style={{ width: '100%', maxWidth: '440px', backgroundColor: '#ffffff', borderRadius: '24px', padding: '32px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', border: '1px solid #fbedd6', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%', maxWidth: '440px', backgroundColor: '#ffffff', borderRadius: '24px', padding: '32px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', border: '1px solid #fbedd6', boxSizing: 'border-box', textAlign: 'center' }}>
           
-          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: '#fbedd6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', fontSize: '32px', border: '1px solid rgba(191, 126, 70, 0.2)' }}>
-              🐕
-            </div>
-            
-            <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#2d3748', margin: '0 0 8px 0' }}>
-              {isLoginMode ? 'ยินดีต้อนรับกลับครับพี่! 👋' : 'มาสร้างร้านค้ากัน! 🚀'}
-            </h1>
-            <p style={{ fontSize: '12px', color: '#4a5568', margin: 0, fontWeight: '500' }}>
-              {isLoginMode ? 'เข้าสู่ระบบด้วยเบอร์โทรศัพท์เพื่อจัดการร้านค้า' : 'กรอกข้อมูลเพื่อเปิดบัญชีร้านค้าใหม่'}
-            </p>
+          <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: '#fbedd6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', fontSize: '32px', border: '1px solid rgba(191, 126, 70, 0.2)' }}>
+            🐕
           </div>
+          
+          <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#2d3748', margin: '0 0 8px 0' }}>
+            NJ Accounting
+          </h1>
+          <p style={{ fontSize: '13px', color: '#4a5568', margin: '0 0 24px 0', fontWeight: '500' }}>
+            ระบบบัญชีร้านค้าอัจฉริยะ • เข้าใช้งานด้วยบัญชี LINE
+          </p>
 
-          <div style={{ backgroundColor: '#fffbf2', border: '1px solid #fbedd6', borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#bf7e46', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ backgroundColor: '#fffbf2', border: '1px solid #fbedd6', borderRadius: '16px', padding: '16px', marginBottom: '24px', textAlign: 'left' }}>
+            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#bf7e46', marginBottom: '10px' }}>
               🎁 สิทธิพิเศษสำหรับพี่:
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#4a5568', marginBottom: '6px', fontWeight: '600' }}>
-              <span>• ทดลองใช้งานฟรีเต็มระบบ</span>
+              <span>ทดลองใช้งานฟรีเต็มระบบ</span>
               <span style={{ backgroundColor: '#e6fffa', color: '#319795', padding: '2px 8px', borderRadius: '6px', fontWeight: 'bold' }}>1 เดือนเต็ม</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#4a5568', fontWeight: '600' }}>
-              <span>• หลังจากนั้นแพ็กเกจรายเดือน</span>
+              <span>หลังจากนั้นแพ็กเกจรายเดือน</span>
               <span style={{ color: '#bf7e46', fontWeight: 'bold' }}>เพียง 199 บาท/เดือน</span>
             </div>
           </div>
 
-          {authError && (
-            <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#fff5f5', border: '1px solid #feb2b2', borderRadius: '12px', color: '#c53030', fontSize: '12px', fontWeight: 'bold', textAlign: 'center' }}>
-              ⚠️ {authError}
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={handleLineLogin}
+            disabled={loading}
+            style={{ width: '100%', padding: '16px', backgroundColor: '#06C755', color: '#ffffff', border: 'none', borderRadius: '14px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 4px 6px -1px rgba(6, 199, 85, 0.3)' }}
+          >
+            <span>{loading ? 'กำลังเชื่อมต่อ...' : 'เข้าสู่ระบบด้วย LINE 💬'}</span>
+          </button>
 
-          <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {!isLoginMode && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4a5568', paddingLeft: '4px' }}>ชื่อร้านค้าของคุณ</label>
-                <input
-                  type="text"
-                  required
-                  value={shopNameInput}
-                  onChange={(e) => setShopNameInput(e.target.value)}
-                  placeholder="เช่น ร้านข้าวพันผัก"
-                  style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', backgroundColor: '#faf7f2', border: '1px solid #fbedd6', outline: 'none', fontSize: '14px', fontWeight: '600', color: '#2d3748', boxSizing: 'border-box' }}
-                />
-              </div>
-            )}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4a5568', paddingLeft: '4px' }}>เบอร์โทรศัพท์ (10 หลัก)</label>
-              <input
-                type="tel"
-                required
-                maxLength={10}
-                value={authPhone}
-                onChange={(e) => setAuthPhone(e.target.value.replace(/\D/g, ''))}
-                placeholder="0812345678"
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', backgroundColor: '#faf7f2', border: '1px solid #fbedd6', outline: 'none', fontSize: '14px', fontWeight: '600', color: '#2d3748', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4a5568', paddingLeft: '4px' }}>รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)</label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={authPassword}
-                onChange={(e) => setAuthPassword(e.target.value)}
-                placeholder="••••••••"
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', backgroundColor: '#faf7f2', border: '1px solid #fbedd6', outline: 'none', fontSize: '14px', fontWeight: '600', color: '#2d3748', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <div style={{ paddingTop: '6px' }}>
-              <button
-                type="submit"
-                style={{ width: '100%', padding: '14px', backgroundColor: '#BF7E46', color: '#ffffff', fontWeight: '900', fontSize: '14px', borderRadius: '12px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
-              >
-                {isLoginMode ? 'เข้าสู่ระบบด้วยเบอร์โทร 🐕' : 'สมัครสมาชิก & เริ่มต้นใช้งาน 🚀'}
-              </button>
-            </div>
-          </form>
-
-          <div style={{ textAlign: 'center', marginTop: '16px' }}>
-            <button
-              type="button"
-              onClick={() => {
-                setIsLoginMode(!isLoginMode);
-                setAuthError('');
-              }}
-              style={{ background: 'none', border: 'none', color: '#bf7e46', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline' }}
-            >
-              {isLoginMode ? 'ยังไม่มีบัญชีร้านค้า? สมัครสมาชิกใหม่ที่นี่' : 'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ'}
-            </button>
-          </div>
-
-          <div style={{ marginTop: '16px', padding: '10px', backgroundColor: '#f0fff4', border: '1px solid #c6f6d5', borderRadius: '12px', textAlign: 'center', fontSize: '11px', color: '#276749', fontWeight: '600' }}>
+          <div style={{ marginTop: '20px', padding: '10px', backgroundColor: '#f0fff4', border: '1px solid #c6f6d5', borderRadius: '12px', textAlign: 'center', fontSize: '11px', color: '#276749', fontWeight: '600' }}>
             💬 ติดปัญหาตรงไหนทักมาได้ตลอดเลยนะครับ Line ID: @579mimsm
           </div>
 
