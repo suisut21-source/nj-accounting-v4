@@ -52,13 +52,12 @@ export default function Home() {
     checkSubscriptionExpire();
   }, []);
 
-  // 🐾 ฟังก์ชันเข้าสู่ระบบด้วย LINE OAuth2
+  /// 🐾 ฟังก์ชันเข้าสู่ระบบด้วย LINE OAuth2
   const handleLineLogin = () => {
-    const channelId = '2006571253';
     const redirectUri = encodeURIComponent(window.location.origin + '/auth/callback');
     const state = Math.random().toString(36).substring(7);
     
-    window.location.href = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=\({channelId}&redirect_uri=\){redirectUri}&state=${state}&scope=profile%20openid%20email`;
+    window.location.href = 'https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=2006571253&redirect_uri=' + redirectUri + '&state=' + state + '&scope=profile%20openid%20email';
   };
 
   const [incomeData, setIncomeData] = useState<any[]>([]);
