@@ -12,6 +12,7 @@ interface StoreItem {
   subscription_status: string;
   package_name: string;
   created_at: string;
+  line_user_id: string;
 }
 
 export default function AdminPricingPage() {
@@ -38,15 +39,24 @@ export default function AdminPricingPage() {
     fetchStores();
   }, []);
 
-  // ฟังก์ชันกดอนุมัติสิทธิ์แพ็กเกจให้ร้านค้า (อ้างอิงด้วย id)
-  const handleApprove = async (id: string, shop_name: string) => {
-    if (confirm(`คุณต้องการอนุมัติแพ็กเกจให้กับร้าน "${shop_name || 'ร้านค้า'}" ใช่หรือไม่?`)) {
-      const { error } = await supabase
-        .from('stores')
-        .update({ 
-          subscription_status: 'active'
-        })
-        .eq('id', id);
+  // ฟังก์ชันกดอนุมัติสิทธิ์แพ็กเกจ (รองรับทั้ง id หรือ phone_number)
+  const handleApprove = async (store: StoreItem) => {
+    if (confirm(`คุณต้องการอนุมัติแพ็กเกจให้กับร้าน "${store.shop_name || 'ร้านค้า'}" ใช่หรือไม่?`)) {
+      let query = supabase.from('stores').update({ subscription_status: 'active' });
+
+      // เงื่อนไขเลือกตัวระบุแถวข้อมูลให้แม่นยำที่สุด
+      if (store.id) {
+        query = query.eq('id', store.id);
+      } else if (store.phone_number) {
+        query = query.eq('phone_number', store.phone_number);
+      } else if (store.line_user_id) {
+        query = query.eq('line_user_id', store.line_user_id);
+      } else {
+        alert('⚠️ ไม่พบข้อมูลระบุตัวตนของร้านค้านี้');
+        return;
+      }
+
+      const { error } = await query;
 
       if (error) {
         alert('⚠️ เกิดข้อผิดพลาดในการอนุมัติ กรุณาลองใหม่อีกครั้ง');
@@ -58,13 +68,23 @@ export default function AdminPricingPage() {
     }
   };
 
-  // ฟังก์ชันลบร้านค้าออกจากระบบ (อ้างอิงด้วย id)
-  const handleDelete = async (id: string, shop_name: string) => {
-    if (confirm(`ต้องการลบบัญชีร้าน "${shop_name || 'ร้านค้า'}" ออกจากระบบใช่หรือไม่?`)) {
-      const { error } = await supabase
-        .from('stores')
-        .delete()
-        .eq('id', id);
+  // ฟังก์ชันลบร้านค้าออกจากระบบ
+  const handleDelete = async (store: StoreItem) => {
+    if (confirm(`ต้องการลบบัญชีร้าน "${store.shop_name || 'ร้านค้า'}" ออกจากระบบใช่หรือไม่?`)) {
+      let query = supabase.from('stores').delete();
+
+      if (store.id) {
+        query = query.eq('id', store.id);
+      } else if (store.phone_number) {
+        query = query.eq('phone_number', store.phone_number);
+      } else if (store.line_user_id) {
+        query = query.eq('line_user_id', store.line_user_id);
+      } else {
+        alert('⚠️ ไม่พบข้อมูลระบุตัวตนของร้านค้านี้');
+        return;
+      }
+
+      const { error } = await query;
 
       if (error) {
         alert('⚠️ เกิดข้อผิดพลาดในการลบข้อมูล');
@@ -131,7 +151,7 @@ export default function AdminPricingPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {stores.map((store) => (
-              <div key={store.id} className="bg-slate-50/80 p-6 rounded-3xl border border-slate-200 space-y-4 shadow-xs">
+              <div key={store.id || store.phone_number} className="bg-slate-50/80 p-6 rounded-3xl border border-slate-200 space-y-4 shadow-xs">
                 
                 <div className="flex justify-between items-start">
                   <div>
@@ -157,14 +177,14 @@ export default function AdminPricingPage() {
                 <div className="flex items-center gap-3 pt-2">
                   {store.subscription_status !== 'active' && (
                     <button
-                      onClick={() => handleApprove(store.id, store.shop_name)}
+                      onClick={() => handleApprove(store)}
                       className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-2xl transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <CheckCircle className="w-4 h-4" /> อนุมัติแพ็คเกจ
                     </button>
                   )}
                   <button
-                    onClick={() => handleDelete(store.id, store.shop_name)}
+                    onClick={() => handleDelete(store)}
                     className="py-3 px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-2xl transition flex items-center justify-center gap-1 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" /> ลบ
