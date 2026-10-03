@@ -49,7 +49,6 @@ function LineCallbackContent() {
           localStorage.setItem('nj_line_user_id', lineUserId);
           localStorage.setItem('nj_shop_name', existingStore.shop_name || 'ร้านค้าของฉัน');
           
-          // บังคับพุ่งไปที่หน้า /pricing เพื่อให้เลือกแพ็กเกจ / กดรับสิทธิ์ทดลองใช้
           setStatusMessage('เข้าสู่ระบบสำเร็จ! กำลังพาไปหน้าเลือกแพ็กเกจ...');
           setTimeout(() => { window.location.href = '/pricing'; }, 1000);
 
@@ -57,14 +56,14 @@ function LineCallbackContent() {
           const trialExpireDate = new Date();
           trialExpireDate.setDate(trialExpireDate.getDate() + 30);
 
-          const newShopName = displayName ? ร้านของ ${displayName} : 'ร้านค้าของฉัน';
+          const storeName = displayName ? 'ร้านของ ' + displayName : 'ร้านค้าของฉัน';
 
           const { error: insertError } = await supabase
             .from('stores')
             .insert([
               {
                 line_user_id: lineUserId,
-                shop_name: newShopName,
+                shop_name: storeName,
                 subscription_status: 'pending',
                 package_name: 'ทดลองใช้ฟรี 30 วัน',
                 expire_date: trialExpireDate.toISOString()
@@ -75,9 +74,8 @@ function LineCallbackContent() {
 
           localStorage.setItem('nj_is_logged_in', 'true');
           localStorage.setItem('nj_line_user_id', lineUserId);
-          localStorage.setItem('nj_shop_name', newShopName);
+          localStorage.setItem('nj_shop_name', storeName);
 
-          // สร้างบัญชีใหม่เสร็จ พาพุ่งไปที่หน้า /pricing ทันที
           setStatusMessage('สร้างบัญชีร้านค้าสำเร็จ! กำลังพาไปรับสิทธิ์ทดลองใช้ฟรี...');
           setTimeout(() => { window.location.href = '/pricing'; }, 1000);
         }
