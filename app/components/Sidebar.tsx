@@ -15,33 +15,41 @@ export default function Sidebar() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false); // สถานะเปิด-ปิดเมนูบนมือถือ
 
-  // 🔒 เช็กสถานะการอนุมัติจาก Supabase แบบเรียลไทม์
+  // 🔒 เช็กสถานะการอนุมัติจาก Supabase แบบเรียลไทม์ผ่าน LINE User ID
   useEffect(() => {
     const checkStoreStatus = async () => {
       // ถ้าอยู่หน้า auth หรือหน้า pricing อยู่แล้ว ไม่ต้องเช็กวนลูปซ้ำ
       if (pathname === '/auth' || pathname === '/pricing') return;
 
-      const phone = localStorage.getItem('nj_phone');
-      if (!phone) return;
+      const lineUserId = localStorage.getItem('nj_line_user_id');
+      if (!lineUserId) {
+        router.push('/auth');
+        return;
+      }
 
       const { data, error } = await supabase
         .from('stores')
         .select('subscription_status, expire_date')
-        .eq('phone_number', phone)
+        .eq('line_user_id', lineUserId)
         .single();
 
       if (!error && data) {
         const now = new Date();
         const expireDate = data.expire_date ? new Date(data.expire_date) : null;
 
-        // ถ้าสถานะไม่ใช่ active หรือหมดอายุแล้ว ให้ดีดไปหน้า /pricing ทันที
+        // ถ้าสถานะไม่ใช่ active หรือหมดอายุแล้ว ให้ดีดไปหน้า /pricing ทันทีเพื่อรออนุมัติ
         if (data.subscription_status !== 'active' || (expireDate && now > expireDate)) {
           router.push('/pricing');
         }
+      } else {
+        // ถ้าไม่พบข้อมูลร้านค้า ให้กลับไปหน้าล็อกอิน
+        router.push('/auth');
       }
     };
 
     checkStoreStatus();
+    const interval = setInterval(checkStoreStatus, 5000); // เช็กทุกๆ 5 วินาที
+    return () => clearInterval(interval);
   }, [pathname, router]);
 
   // 🔒 ถ้าตอนนี้อยู่หน้า /auth ให้ซ่อน Sidebar ทันที ไม่ให้กดข้ามไปไหนได้
@@ -116,7 +124,7 @@ export default function Sidebar() {
         />
       )}
 
-      {/* 🗂️ ตัว Sidebar หลัก */}
+      {/* 🗂️️ ตัว Sidebar หลัก */}
       <aside 
         className={`fixed md:sticky top-0 left-0 z-50 w-64 h-screen p-4 flex flex-col justify-between shadow-lg md:shadow-md border-r transition-transform duration-300 ease-in-out overflow-y-auto ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
