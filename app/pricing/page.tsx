@@ -8,6 +8,7 @@ interface StoreData {
   subscription_status: string;
   package_name: string;
   expire_date: string;
+  line_user_id: string;
 }
 
 export default function PricingPage() {
@@ -27,17 +28,20 @@ export default function PricingPage() {
 
   useEffect(() => {
     const fetchStoreStatus = async () => {
-      const loggedInPhone = localStorage.getItem('nj_phone');
-      if (!loggedInPhone) return;
+      const lineUserId = localStorage.getItem('nj_line_user_id');
+      if (!lineUserId) return;
 
       const { data, error } = await supabase
         .from('stores')
         .select('*')
-        .eq('phone_number', loggedInPhone)
+        .eq('line_user_id', lineUserId)
         .single();
 
       if (!error && data) {
         setStoreInfo(data);
+        if (data.shop_name && !shopName) setShopName(data.shop_name);
+        if (data.phone_number && !shopPhone) setShopPhone(data.phone_number);
+
         if (data.expire_date) {
           const expDate = new Date(data.expire_date);
           const now = new Date();
@@ -75,12 +79,14 @@ export default function PricingPage() {
       alert('กรุณากรอกชื่อร้านค้าของคุณ');
       return;
     }
-    if (!shopPhone || shopPhone.length < 10) {
-      alert('กรุณากรอกเบอร์โทรศัพท์ร้านให้ถูกต้อง (อย่างน้อย 10 หลัก)');
+
+    const lineUserId = localStorage.getItem('nj_line_user_id');
+    if (!lineUserId) {
+      alert('⚠️ ไม่พบข้อมูลการเข้าสู่ระบบผ่าน LINE กรุณาล็อกอินใหม่อีกครั้ง');
+      window.location.href = '/auth';
       return;
     }
 
-    const cleanPhone = shopPhone.replace(/\D/g, '');
     const expireDateObj = new Date();
     expireDateObj.setDate(expireDateObj.getDate() + 30);
 
@@ -88,11 +94,12 @@ export default function PricingPage() {
       .from('stores')
       .update({
         shop_name: shopName,
+        phone_number: shopPhone ? shopPhone.replace(/\D/g, '') : null,
         package_name: selectedPlan,
         subscription_status: 'pending',
         expire_date: expireDateObj.toISOString()
       })
-      .eq('phone_number', cleanPhone);
+      .eq('line_user_id', lineUserId);
 
     if (error) {
       alert('⚠️ เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
@@ -101,9 +108,9 @@ export default function PricingPage() {
     }
 
     alert('ลงทะเบียนรับสิทธิ์เรียบร้อยแล้วครับ! รอแอดมินตรวจสอบและอนุมัติเปิดสิทธิ์ใช้งาน 🐾');
-    setShopName('');
-    setShopPhone('');
-    setSlipImage(null);
+    
+    // รีเฟรชข้อมูลสถานะล่าสุด
+    window.location.reload();
   };
 
   return (
@@ -146,16 +153,27 @@ export default function PricingPage() {
               <span className="text-2xl">👑</span>
               <div>
                 <h3 className="font-black text-sm text-slate-900">สถานะแพ็กเกจของร้านคุณ ({storeInfo.shop_name})</h3>
-                <p className="text-xs text-slate-600">เบอร์โทรติดต่อ: {storeInfo.phone_number}</p>
+                <p className="text-xs text-slate-600">เบอร์โทรติดต่อ: {storeInfo.phone_number || 'ยังไม่ได้ระบุ'}</p>
               </div>
             </div>
-            <span className={`text-xs font-black px-4 py-1.5 rounded-full shadow-2xs ${
-              storeInfo.subscription_status === 'active' 
-                ? 'bg-emerald-600 text-white' 
-                : 'bg-amber-500 text-white animate-pulse'
-            }`}>
-              {storeInfo.subscription_status === 'active' ? 'อนุมัติแล้ว ✅' : 'รอตรวจสอบ ⏳'}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className={`text-xs font-black px-4 py-1.5 rounded-full shadow-2xs ${
+                storeInfo.subscription_status === 'active' 
+                  ? 'bg-emerald-600 text-white' 
+                  : 'bg-amber-500 text-white animate-pulse'
+              }`}>
+                {storeInfo.subscription_status === 'active' ? 'อนุมัติแล้ว ✅' : 'รอตรวจสอบ ⏳'}
+              </span>
+
+              {storeInfo.subscription_status === 'active' && (
+                <button
+                  onClick={() => { window.location.href = '/'; }}
+                  className="px-4 py-1.5 bg-[#BF7E46] text-white text-xs font-bold rounded-full shadow-sm hover:opacity-90"
+                >
+                  เข้าสู่หน้าหลัก 🚀
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs pt-1">
@@ -296,10 +314,9 @@ export default function PricingPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">เบอร์โทรศัพท์ติดต่อ (ที่ใช้สมัครสมาชิก)</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">เบอร์โทรศัพท์ติดต่อ</label>
               <input 
                 type="text"
-                required
                 maxLength={10}
                 value={shopPhone}
                 onChange={(e) => setShopPhone(e.target.value.replace(/\D/g, ''))}
