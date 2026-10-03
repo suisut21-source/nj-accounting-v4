@@ -16,7 +16,13 @@ export default function AuthPage() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#faf7f2', padding: '20px', boxSizing: 'border-box' }}>
       <div style={{ width: '100%', maxWidth: '400px', backgroundColor: '#ffffff', borderRadius: '24px', padding: '40px 32px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', border: '1px solid #fbedd6', textAlign: 'center' }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🐕💬</div>
+        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+  <img 
+    src="/logo.jpg" 
+    alt="NJ Accounting Logo" 
+    style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', border: '2px solid #fbedd6' }} 
+  />
+</div>
         <h1 style={{ fontSize: '20px', fontWeight: '900', color: '#2d3748', margin: '0 0 8px 0' }}>NJ Accounting</h1>
         <p style={{ fontSize: '13px', color: '#4a5568', margin: '0 0 32px 0', fontWeight: '500' }}>ระบบบัญชีร้านค้าอัจฉริยะ</p>
 

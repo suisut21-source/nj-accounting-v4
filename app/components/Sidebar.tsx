@@ -133,10 +133,9 @@ export default function Sidebar() {
       >
         <div className="space-y-6 pb-6">
           
-          {/* โลโก้และชื่อร้าน */}
           <div className="hidden md:flex items-center gap-3 p-3 bg-white/90 backdrop-blur-sm rounded-2xl border-2 shadow-sm" style={{ borderColor: '#CC5500' }}>
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0 shadow-inner text-white" style={{ backgroundColor: '#CC5500' }}>
-              🐕
+            <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 shadow-inner border border-amber-200">
+              <img src="/logo.jpg" alt="NJ Accounting Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h2 className="text-sm font-black leading-tight" style={{ color: '#CC5500' }}>NJ Accounting</h2>
