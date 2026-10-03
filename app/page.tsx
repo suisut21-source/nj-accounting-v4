@@ -53,7 +53,6 @@ export default function Home() {
 
   // 🐾 ฟังก์ชันเข้าสู่ระบบด้วย LINE OAuth2
   const handleLineLogin = () => {
-    
     const channelId = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2006571253';
     const redirectUri = encodeURIComponent(window.location.origin + '/auth/callback');
     const state = Math.random().toString(36).substring(7);
