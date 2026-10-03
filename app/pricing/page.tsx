@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { FiCheck, FiStar, FiClock, FiZap, FiShield } from 'react-icons/fi';
 
 interface StoreData {
   shop_name: string;
@@ -12,7 +13,7 @@ interface StoreData {
 }
 
 export default function PricingPage() {
-  const [selectedPlan, setSelectedPlan] = useState('NJ Start (ทดลองใช้ฟรี 1 เดือนแรก - หลังจากนั้น 199 บาท/เดือน)');
+  const [selectedPlan, setSelectedPlan] = useState('NJ Plus (ทดลองใช้ฟรี 1 เดือนแรก - หลังจากนั้น 259 บาท/เดือน)');
   const [shopName, setShopName] = useState('');
   const [shopPhone, setShopPhone] = useState('');
   const [slipImage, setSlipImage] = useState<string | null>(null);
@@ -108,8 +109,6 @@ export default function PricingPage() {
     }
 
     alert('ลงทะเบียนรับสิทธิ์เรียบร้อยแล้วครับ! รอแอดมินตรวจสอบและอนุมัติเปิดสิทธิ์ใช้งาน 🐾');
-    
-    // รีเฟรชข้อมูลสถานะล่าสุด
     window.location.reload();
   };
 
@@ -139,7 +138,7 @@ export default function PricingPage() {
               ทดลองใช้ NJ Accounting ฟรี 1 เดือนเต็ม!
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 font-medium mt-1">
-              กรุณาเลือกแพ็กเกจที่ต้องการด้านล่าง (NJ Start หรือ NJ Plus) แล้วลงทะเบียนเพื่อรับสิทธิ์ใช้งานฟรีทันที
+              กรุณาเลือกแพ็กเกจที่ต้องการด้านล่าง แล้วลงทะเบียนเพื่อรับสิทธิ์ใช้งานฟรีทันที
             </p>
           </div>
         </div>
@@ -195,10 +194,10 @@ export default function PricingPage() {
         </div>
       )}
 
-      {/* ส่วนเลือกแพ็กเกจ */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {/* ส่วนเลือกแพ็กเกจทั้ง 3 ระดับ */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
         
-        {/* NJ Start */}
+        {/* 1. NJ Start */}
         <div className={`bg-white p-8 rounded-[2.5rem] shadow-sm border-2 flex flex-col justify-between space-y-6 transition ${
           selectedPlan.includes('NJ Start') ? 'border-[#BF7E46] ring-2 ring-[#BF7E46]/20 shadow-md' : 'border-slate-200/80'
         }`}>
@@ -210,17 +209,18 @@ export default function PricingPage() {
             <h2 className="text-xl font-black text-slate-800 mb-1">NJ Start</h2>
             <div className="mb-4">
               <span className="text-2xl font-black text-[#BF7E46]">199 บาท</span>
-              <span className="text-xs text-slate-500 font-bold"> / เดือน (หลังหมดช่วงฟรี)</span>
+              <span className="text-xs text-slate-500 font-bold"> / เดือน</span>
             </div>
-            <p className="text-xs text-slate-500 mb-6">เหมาะสำหรับร้านขนาดเล็ก เจ้าของดูแลและทำบัญชีเอง</p>
+            <p className="text-xs text-slate-500 mb-6">สำหรับร้านค้าและเจ้าของกิจการที่เริ่มทำบัญชี</p>
+            
             <ul className="space-y-3 text-xs text-slate-700">
               <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> ใช้งานได้ 1–2 คน</li>
               <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> บันทึกรายรับ–รายจ่าย</li>
-              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> จัดการเงินสด / บัญชี</li>
-              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> รองรับบันทึกและแยกค่าใช้จ่ายเดลิเวอรี (Grab / LINE MAN / ShopeeFood)</li>
-              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> รายงานสรุปยอดขายและกำไร</li>
-              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> ภาษีและ VAT</li>
-              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> ดาวน์โหลด Excel + ZIP ใบเสร็จ</li>
+              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> จัดการเงินสด / บัญชีธนาคาร</li>
+              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> ✓ บันทึกและแยกยอดเดลิเวอรี (Grab / LINE MAN / ShopeeFood)</li>
+              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> รายงานสรุปยอดขายและค่าใช้จ่าย</li>
+              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> ภาษี & VAT / ดาวน์โหลด Excel / ZIP</li>
+              <li className="flex items-center gap-3 font-bold text-amber-700"><span className="text-amber-500 font-bold">✓</span> เข้าสู่ระบบด้วย LINE (พื้นฐาน)</li>
             </ul>
           </div>
           
@@ -236,34 +236,37 @@ export default function PricingPage() {
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            {selectedPlan.includes('NJ Start') ? '✓ เลือกแพ็กเกจ NJ Start แล้ว (เลื่อนลงไปกรอกข้อมูลด้านล่าง)' : '🎯 เลือกแพ็กเกจ NJ Start (ทดลองฟรี 1 เดือน)'}
+            {selectedPlan.includes('NJ Start') ? '✓ เลือก NJ Start แล้ว' : '🎯 เลือก NJ Start'}
           </button>
         </div>
 
-        {/* NJ Plus */}
+        {/* 2. NJ Plus (แนะนำ) */}
         <div className={`bg-white p-8 rounded-[2.5rem] shadow-sm border-2 flex flex-col justify-between space-y-6 relative overflow-hidden transition ${
-          selectedPlan.includes('NJ Plus') ? 'border-[#BF7E46] ring-2 ring-[#BF7E46]/20 shadow-md' : 'border-[#BF7E46]/60'
+          selectedPlan.includes('NJ Plus') ? 'border-[#BF7E46] ring-2 ring-[#BF7E46]/20 shadow-md' : 'border-[#BF7E46]'
         }`}>
-          <div className="absolute top-0 right-0 bg-[#BF7E46] text-white text-[11px] font-black px-6 py-1.5 rounded-bl-3xl shadow-sm tracking-wider uppercase">
-            ⭐ ฟรี 1 เดือนยอดฮิต
+          <div className="absolute top-0 right-0 bg-[#BF7E46] text-white text-[11px] font-black px-6 py-1.5 rounded-bl-3xl shadow-sm tracking-wider uppercase flex items-center gap-1">
+            <FiStar /> แพ็กเกจแนะนำยอดฮิต
           </div>
           <div>
             <div className="flex justify-between items-center mb-4">
-              <span className="text-xs font-bold px-3 py-1 bg-amber-100 text-amber-900 rounded-full">👥 สำหรับทีมงาน</span>
+              <span className="text-xs font-bold px-3 py-1 bg-amber-100 text-amber-900 rounded-full">👑 สำหรับทีมงาน</span>
               <span className="text-xs font-black px-3 py-1 bg-amber-100 text-amber-800 rounded-full">ฟรี 1 เดือนแรก</span>
             </div>
             <h2 className="text-xl font-black text-slate-900 mb-1">NJ Plus</h2>
             <div className="mb-4">
               <span className="text-2xl font-black text-[#BF7E46]">259 บาท</span>
-              <span className="text-xs text-slate-500 font-bold"> / เดือน (หลังหมดช่วงฟรี)</span>
+              <span className="text-xs text-slate-500 font-bold"> / เดือน</span>
             </div>
-            <p className="text-xs text-slate-500 mb-6">สำหรับร้านที่มีพนักงานช่วยจัดการ ต้องการระบบทีมเวิร์ก</p>
+            <p className="text-xs text-slate-500 mb-6">สำหรับร้านที่มีพนักงานและต้องการระบบแจ้งเตือนผ่าน LINE</p>
             
             <ul className="space-y-3 text-xs text-slate-700">
-              <li className="flex items-center gap-3 font-bold text-slate-900"><span className="text-[#BF7E46]">✓</span> ใช้งานได้ 3–4 คน (ปลดล็อกเพิ่มพนักงานได้ทันที)</li>
-              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> ทุกฟีเจอร์ครบถ้วนใน NJ Start</li>
-              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> ช่วยจัดรูปแบบไฟล์รายรับ–รายจ่าย 1 ครั้ง/เดือน</li>
-              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> ได้รับการดูแลช่วยเหลือเป็นลำดับแรก (Priority Support)</li>
+              <li className="flex items-center gap-3 font-bold text-slate-900"><span className="text-emerald-600">✓</span> ทุกฟีเจอร์ใน NJ Start ครบถ้วน</li>
+              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> ใช้งาน 3–4 คน (เพิ่มพนักงานได้ทันที)</li>
+              <li className="flex items-center gap-3 font-bold text-amber-800 bg-amber-50 p-2 rounded-xl border border-amber-200">
+                <FiZap className="text-amber-600 shrink-0 text-base" /> รับสรุปยอดและแจ้งเตือนผ่าน LINE อัตโนมัติ
+              </li>
+              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> รายงานและข้อมูลเชิงลึกสำหรับเจ้าของร้าน</li>
+              <li className="flex items-center gap-3"><span className="text-amber-500 font-bold">✓</span> Priority Support ดูแลเป็นพิเศษ</li>
             </ul>
           </div>
           
@@ -276,10 +279,45 @@ export default function PricingPage() {
             className={`w-full py-4 text-xs font-bold rounded-2xl shadow-sm transition tracking-wide ${
               selectedPlan.includes('NJ Plus')
                 ? 'bg-[#BF7E46] text-white shadow-md'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                : 'bg-slate-900 text-white hover:bg-slate-800'
             }`}
           >
-            {selectedPlan.includes('NJ Plus') ? '✓ เลือกแพ็กเกจ NJ Plus แล้ว (เลื่อนลงไปกรอกข้อมูลด้านล่าง)' : '🎯 เลือกแพ็กเกจ NJ Plus (ทดลองฟรี 1 เดือน)'}
+            {selectedPlan.includes('NJ Plus') ? '✓ เลือก NJ Plus แล้ว' : '🎯 เลือก NJ Plus (แนะนำ)'}
+          </button>
+        </div>
+
+        {/* 3. NJ Pro (Future Plan - Coming Soon) */}
+        <div className="bg-slate-50 p-8 rounded-[2.5rem] shadow-sm border-2 border-dashed border-slate-300 flex flex-col justify-between space-y-6 relative opacity-90">
+          <div className="absolute top-0 right-0 bg-slate-700 text-white text-[11px] font-black px-6 py-1.5 rounded-bl-3xl shadow-sm tracking-wider uppercase flex items-center gap-1">
+            <FiClock /> เร็วๆ นี้ 🚀
+          </div>
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-xs font-bold px-3 py-1 bg-slate-200 text-slate-700 rounded-full">🚀 ธุรกิจเติบโต</span>
+              <span className="text-xs font-black px-3 py-1 bg-slate-200 text-slate-600 rounded-full">Future Plan</span>
+            </div>
+            <h2 className="text-xl font-black text-slate-800 mb-1">NJ Pro</h2>
+            <div className="mb-4">
+              <span className="text-2xl font-black text-slate-700">499 บาท</span>
+              <span className="text-xs text-slate-500 font-bold"> / เดือน</span>
+            </div>
+            <p className="text-xs text-slate-500 mb-6">ระบบอัตโนมัติเต็มรูปแบบ รองรับหลายกิจการ</p>
+            
+            <ul className="space-y-3 text-xs text-slate-600">
+              <li className="flex items-center gap-3 font-bold text-slate-800"><span className="text-slate-500">✓</span> ทุกฟีเจอร์ใน NJ Plus</li>
+              <li className="flex items-center gap-3"><span className="text-slate-500">✓</span> ใช้งานได้มากกว่า 4 คนขึ้นไป</li>
+              <li className="flex items-center gap-3"><span className="text-slate-500">✓</span> รองรับหลายร้าน / หลายกิจการ</li>
+              <li className="flex items-center gap-3"><span className="text-slate-500">✓</span> LINE Automation (พิมพ์ยอดผ่านแชตได้)</li>
+              <li className="flex items-center gap-3"><span className="text-slate-500">✓</span> รายงานขั้นสูงและการสรุปยอดตามช่วงเวลา</li>
+            </ul>
+          </div>
+          
+          <button
+            type="button"
+            disabled
+            className="w-full py-4 text-xs font-bold rounded-2xl bg-slate-200 text-slate-400 cursor-not-allowed"
+          >
+            🚧 วางแผนเปิดให้บริการเร็วๆ นี้
           </button>
         </div>
 
@@ -309,7 +347,7 @@ export default function PricingPage() {
                 required
                 value={shopName}
                 onChange={(e) => setShopName(e.target.value)}
-                placeholder="เช่น ร้านพาเพลิน"
+                placeholder="เช่น ร้านอารี"
                 className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-2xl outline-none text-slate-800 text-xs shadow-sm focus:border-[#BF7E46]"
               />
             </div>
@@ -397,3 +435,4 @@ export default function PricingPage() {
     </div>
   );
 }
+
