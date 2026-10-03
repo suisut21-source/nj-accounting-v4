@@ -49,8 +49,8 @@ function LineCallbackContent() {
           localStorage.setItem('nj_line_user_id', lineUserId);
           localStorage.setItem('nj_shop_name', existingStore.shop_name || 'ร้านค้าของฉัน');
           
-          setStatusMessage('เข้าสู่ระบบสำเร็จ! กำลังพากลับสู่หน้าหลัก...');
-          setTimeout(() => { window.location.href = '/'; }, 1000);
+          setStatusMessage('สร้างบัญชีร้านค้าสำเร็จ! กำลังพาไปรับสิทธิ์ทดลองใช้ฟรี...');
+          setTimeout(() => { window.location.href = '/pricing'; }, 1000);
 
         } else {
           const trialExpireDate = new Date();
