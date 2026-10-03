@@ -6,7 +6,7 @@ export default function AuthPage() {
 
   const handleLineLogin = () => {
     setLoading(true);
-    const channelId = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2006571253'; // ใส่ Channel ID ของพี่
+    const channelId = process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '2006571253';
     const redirectUri = encodeURIComponent(window.location.origin + '/auth/callback');
     const state = Math.random().toString(36).substring(7);
     
