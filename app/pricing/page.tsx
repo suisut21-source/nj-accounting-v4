@@ -36,7 +36,7 @@ export default function PricingPage() {
         .from('stores')
         .select('*')
         .eq('line_user_id', lineUserId)
-        .single();
+        .maybeSingle();
 
       if (!error && data) {
         setStoreInfo(data);
@@ -91,17 +91,21 @@ export default function PricingPage() {
     const expireDateObj = new Date();
     expireDateObj.setDate(expireDateObj.getDate() + 30);
 
-    // 1. เช็กก่อนว่ามีข้อมูลร้านของ LINE ID นี้ในระบบหรือยัง
-    const { data: existingStore } = await supabase
+    // 1. ใช้ maybeSingle เพื่อป้องกัน Error กรณีที่ยังไม่มีข้อมูลร้านค้านี้ในระบบ
+    const { data: existingStore, error: fetchError } = await supabase
       .from('stores')
       .select('id')
       .eq('line_user_id', lineUserId)
-      .single();
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error('Fetch store error:', fetchError);
+    }
 
     let error;
 
     if (existingStore) {
-      // 2. ถ้ามีแล้วใช้วิธี Update
+      // 2. ถ้ามีข้อมูลเดิมอยู่แล้ว ใช้วิธี Update
       const res = await supabase
         .from('stores')
         .update({
@@ -114,7 +118,7 @@ export default function PricingPage() {
         .eq('line_user_id', lineUserId);
       error = res.error;
     } else {
-      // 3. ถ้ายังไม่มีใช้วิธี Insert สร้างใหม่
+      // 3. ถ้ายังไม่มีข้อมูลเลย ใช้วิธี Insert สร้างใหม่
       const res = await supabase
         .from('stores')
         .insert({
