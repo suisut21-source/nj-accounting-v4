@@ -12,6 +12,10 @@ interface StoreData {
   line_user_id: string;
 }
 
+// แพ็กเกจจริงต้องเป็น NJ Start / NJ Plus เท่านั้น
+// (ค่าเริ่มต้น "ทดลองใช้ฟรี 30 วัน" ที่หน้าล็อกอินสร้างไว้ ไม่นับว่าเลือกแพ็กเกจแล้ว)
+const isRealPackage = (p?: string | null): boolean => !!p && p.includes('NJ ');
+
 export default function PricingPage() {
   const [selectedPlan, setSelectedPlan] = useState('NJ Plus (ทดลองใช้ฟรี 1 เดือนแรก - หลังจากนั้น 259 บาท/เดือน)');
   const [shopName, setShopName] = useState('');
@@ -24,7 +28,7 @@ export default function PricingPage() {
   const supportContact = '@579mimsm (Admin Support / NJ ยินดีบริการ)';
 
   // ถือว่า "กดยืนยันรับสิทธิ์แล้ว" เมื่อมีแพ็กเกจที่เลือกบันทึกไว้ในฐานข้อมูล
-  const hasRegistered = !!storeInfo?.package_name;
+  const hasRegistered = isRealPackage(storeInfo?.package_name);
 
   const myBankInfo = {
     bankName: 'ธนาคารไทยพาณิชย์ (SCB)',
@@ -51,6 +55,8 @@ export default function PricingPage() {
           prefilled.current = true;
           if (data.shop_name) setShopName(data.shop_name);
           if (data.phone_number) setShopPhone(data.phone_number);
+          // ให้การ์ดแพ็กเกจที่เลือกตรงกับที่บันทึกไว้ในฐานข้อมูล
+          if (isRealPackage(data.package_name)) setSelectedPlan(data.package_name);
         }
 
         if (data.expire_date) {
@@ -104,22 +110,40 @@ export default function PricingPage() {
 
     const { data: existingStore, error: fetchError } = await supabase
       .from('stores')
-      .select('id, package_name, shop_name')
+      .select('id, package_name, shop_name, subscription_status')
       .eq('line_user_id', lineUserId)
       .maybeSingle();
 
     if (fetchError) console.error('Fetch store error:', fetchError);
 
     let error;
-    let isNewRegistration = true;
+    let eventType: 'new_registration' | 'package_changed' | 'shop_updated' = 'new_registration';
     const oldName = existingStore?.shop_name || '';
+    const oldPackage = existingStore?.package_name || '';
+    const currentStatus = existingStore?.subscription_status || '';
 
-    if (existingStore?.package_name) {
-      // เคยกดรับสิทธิ์แล้ว → แก้ได้เฉพาะชื่อ/เบอร์ ห้ามรีเซ็ตสถานะหรือวันหมดอายุ
-      isNewRegistration = false;
+    if (isRealPackage(existingStore?.package_name)) {
+      // เคยกดรับสิทธิ์แล้ว → ห้ามรีเซ็ตสถานะหรือวันหมดอายุ (กันต่อทดลองฟรีซ้ำ)
+      const packageChanged = oldPackage !== selectedPlan;
+
+      if (packageChanged && currentStatus === 'active') {
+        setSaving(false);
+        alert('แพ็กเกจนี้ได้รับอนุมัติแล้วครับ หากต้องการเปลี่ยนแพ็กเกจ กรุณาติดต่อแอดมิน');
+        return;
+      }
+
+      const updateData: Record<string, any> = { shop_name: name, phone_number: phone };
+      if (packageChanged) {
+        // ยังรออนุมัติอยู่ → เปลี่ยนแพ็กเกจได้ สถานะยังเป็น pending วันหมดอายุเดิม
+        updateData.package_name = selectedPlan;
+        eventType = 'package_changed';
+      } else {
+        eventType = 'shop_updated';
+      }
+
       const res = await supabase
         .from('stores')
-        .update({ shop_name: name, phone_number: phone })
+        .update(updateData)
         .eq('line_user_id', lineUserId);
       error = res.error;
     } else {
@@ -153,11 +177,15 @@ export default function PricingPage() {
       await fetch('/api/notify-line', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          isNewRegistration
-            ? { type: 'new_registration', shopName: name, packageName: selectedPlan, phone: shopPhone || 'ไม่ได้ระบุ' }
-            : { type: 'shop_updated', oldShopName: oldName, shopName: name, phone: shopPhone || 'ไม่ได้ระบุ', status: storeInfo?.subscription_status }
-        ),
+        body: JSON.stringify({
+          type: eventType,
+          shopName: name,
+          oldShopName: oldName,
+          packageName: selectedPlan,
+          oldPackageName: oldPackage,
+          phone: shopPhone || 'ไม่ได้ระบุ',
+          status: currentStatus || 'pending',
+        }),
       });
     } catch (err) {
       console.error('Line notify error:', err);
@@ -165,9 +193,11 @@ export default function PricingPage() {
 
     setSaving(false);
     alert(
-      isNewRegistration
+      eventType === 'new_registration'
         ? 'ลงทะเบียนรับสิทธิ์เรียบร้อยแล้วครับ! รอแอดมินตรวจสอบและอนุมัติ 🐾'
-        : 'แก้ไขข้อมูลร้านเรียบร้อยแล้วครับ ✅'
+        : eventType === 'package_changed'
+          ? 'เปลี่ยนแพ็กเกจเรียบร้อยแล้วครับ! แจ้งแอดมินให้ตรวจสอบและอนุมัติแล้ว 🐾'
+          : 'แก้ไขข้อมูลร้านเรียบร้อยแล้วครับ ✅'
     );
     window.location.reload();
   };
@@ -175,10 +205,10 @@ export default function PricingPage() {
   return (
     <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-8 font-sans pb-24">
 
-       {/* Header */}
+      {/* Header */}
       <div
         className="p-8 rounded-[2.5rem] shadow-sm border flex flex-col md:flex-row justify-between items-start md:items-center gap-6 text-slate-800 relative overflow-hidden"
-         style={{ backgroundColor: '#FBEDD6', borderColor: '#f3dcbc' }}
+        style={{ backgroundColor: '#FBEDD6', borderColor: '#f3dcbc' }}
       >
         <div className="absolute right-[-20px] bottom-[-20px] text-8xl opacity-10 pointer-events-none">
           🎁
@@ -449,7 +479,9 @@ export default function PricingPage() {
             {saving
               ? 'กำลังบันทึก...'
               : hasRegistered
-                ? '💾 บันทึกการแก้ไขชื่อร้าน'
+                ? (storeInfo?.subscription_status === 'active'
+                    ? '💾 บันทึกการแก้ไขชื่อร้าน'
+                    : '💾 บันทึกการแก้ไข (ชื่อร้าน / แพ็กเกจ)')
                 : `🎁 ยืนยันรับสิทธิ์ทดลองใช้ฟรี 1 เดือน (${selectedPlan.split(' ')[0]} ${selectedPlan.split(' ')[1]})`}
           </button>
         </form>
