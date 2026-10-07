@@ -91,17 +91,42 @@ export default function PricingPage() {
     const expireDateObj = new Date();
     expireDateObj.setDate(expireDateObj.getDate() + 30);
 
-    // 🚀 ใช้ upsert เพื่อให้บันทึกข้อมูลได้ทันที แม้ในตารางจะยังไม่มีแถวข้อมูลอยู่ก็ตาม
-    const { error } = await supabase
+    // 1. เช็กก่อนว่ามีข้อมูลร้านของ LINE ID นี้ในระบบหรือยัง
+    const { data: existingStore } = await supabase
       .from('stores')
-      .upsert({
-        line_user_id: lineUserId,
-        shop_name: shopName,
-        phone_number: shopPhone ? shopPhone.replace(/\D/g, '') : null,
-        package_name: selectedPlan,
-        subscription_status: 'pending',
-        expire_date: expireDateObj.toISOString()
-      }, { onConflict: 'line_user_id' });
+      .select('id')
+      .eq('line_user_id', lineUserId)
+      .single();
+
+    let error;
+
+    if (existingStore) {
+      // 2. ถ้ามีแล้วใช้วิธี Update
+      const res = await supabase
+        .from('stores')
+        .update({
+          shop_name: shopName,
+          phone_number: shopPhone ? shopPhone.replace(/\D/g, '') : null,
+          package_name: selectedPlan,
+          subscription_status: 'pending',
+          expire_date: expireDateObj.toISOString()
+        })
+        .eq('line_user_id', lineUserId);
+      error = res.error;
+    } else {
+      // 3. ถ้ายังไม่มีใช้วิธี Insert สร้างใหม่
+      const res = await supabase
+        .from('stores')
+        .insert({
+          line_user_id: lineUserId,
+          shop_name: shopName,
+          phone_number: shopPhone ? shopPhone.replace(/\D/g, '') : null,
+          package_name: selectedPlan,
+          subscription_status: 'pending',
+          expire_date: expireDateObj.toISOString()
+        });
+      error = res.error;
+    }
 
     if (error) {
       alert('⚠️ เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
@@ -127,7 +152,7 @@ export default function PricingPage() {
     alert('ลงทะเบียนรับสิทธิ์เรียบร้อยแล้วครับ! รอแอดมินตรวจสอบและอนุมัติเปิดสิทธิ์ใช้งาน 🐾');
     window.location.reload();
   };
-
+  
   return (
     <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-8 font-sans pb-24">
       
