@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { FiCheck, FiStar, FiClock, FiZap, FiShield } from 'react-icons/fi';
 
@@ -19,7 +19,12 @@ export default function PricingPage() {
   const [slipImage, setSlipImage] = useState<string | null>(null);
   const [storeInfo, setStoreInfo] = useState<StoreData | null>(null);
   const [daysLeft, setDaysLeft] = useState<number>(30);
+  const [saving, setSaving] = useState(false);
+  const prefilled = useRef(false); // เติมข้อมูลลงฟอร์มครั้งเดียวเท่านั้น
   const supportContact = '@579mimsm (Admin Support / NJ ยินดีบริการ)';
+
+  // ถือว่า "กดยืนยันรับสิทธิ์แล้ว" เมื่อมีแพ็กเกจที่เลือกบันทึกไว้ในฐานข้อมูล
+  const hasRegistered = !!storeInfo?.package_name;
 
   const myBankInfo = {
     bankName: 'ธนาคารไทยพาณิชย์ (SCB)',
@@ -40,13 +45,16 @@ export default function PricingPage() {
 
       if (!error && data) {
         setStoreInfo(data);
-        if (data.shop_name && !shopName) setShopName(data.shop_name);
-        if (data.phone_number && !shopPhone) setShopPhone(data.phone_number);
+
+        // เติมชื่อ/เบอร์ลงฟอร์มแค่ครั้งแรก หลังจากนั้นไม่ทับสิ่งที่ลูกค้าพิมพ์
+        if (!prefilled.current) {
+          prefilled.current = true;
+          if (data.shop_name) setShopName(data.shop_name);
+          if (data.phone_number) setShopPhone(data.phone_number);
+        }
 
         if (data.expire_date) {
-          const expDate = new Date(data.expire_date);
-          const now = new Date();
-          const diffTime = expDate.getTime() - now.getTime();
+          const diffTime = new Date(data.expire_date).getTime() - Date.now();
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
           setDaysLeft(diffDays > 0 ? diffDays : 0);
         }
@@ -76,7 +84,10 @@ export default function PricingPage() {
 
   const handleSubmitTrial = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!shopName.trim()) {
+    if (saving) return;
+
+    const name = shopName.trim();
+    if (!name) {
       alert('กรุณากรอกชื่อร้านค้าของคุณ');
       return;
     }
@@ -88,88 +99,92 @@ export default function PricingPage() {
       return;
     }
 
-    const expireDateObj = new Date();
-    expireDateObj.setDate(expireDateObj.getDate() + 30);
+    setSaving(true);
+    const phone = shopPhone ? shopPhone.replace(/\D/g, '') : null;
 
-    // 1. ใช้ maybeSingle เพื่อป้องกัน Error กรณีที่ยังไม่มีข้อมูลร้านค้านี้ในระบบ
     const { data: existingStore, error: fetchError } = await supabase
       .from('stores')
-      .select('id')
+      .select('id, package_name, shop_name')
       .eq('line_user_id', lineUserId)
       .maybeSingle();
 
-    if (fetchError) {
-      console.error('Fetch store error:', fetchError);
-    }
+    if (fetchError) console.error('Fetch store error:', fetchError);
 
     let error;
+    let isNewRegistration = true;
+    const oldName = existingStore?.shop_name || '';
 
-    if (existingStore) {
-      // 2. ถ้ามีข้อมูลเดิมอยู่แล้ว ใช้วิธี Update
+    if (existingStore?.package_name) {
+      // เคยกดรับสิทธิ์แล้ว → แก้ได้เฉพาะชื่อ/เบอร์ ห้ามรีเซ็ตสถานะหรือวันหมดอายุ
+      isNewRegistration = false;
       const res = await supabase
         .from('stores')
-        .update({
-          shop_name: shopName,
-          phone_number: shopPhone ? shopPhone.replace(/\D/g, '') : null,
-          package_name: selectedPlan,
-          subscription_status: 'pending',
-          expire_date: expireDateObj.toISOString()
-        })
+        .update({ shop_name: name, phone_number: phone })
         .eq('line_user_id', lineUserId);
       error = res.error;
     } else {
-      // 3. ถ้ายังไม่มีข้อมูลเลย ใช้วิธี Insert สร้างใหม่
-      const res = await supabase
-        .from('stores')
-        .insert({
-          line_user_id: lineUserId,
-          shop_name: shopName,
-          phone_number: shopPhone ? shopPhone.replace(/\D/g, '') : null,
-          package_name: selectedPlan,
-          subscription_status: 'pending',
-          expire_date: expireDateObj.toISOString()
-        });
+      // ยังไม่เคยกดรับสิทธิ์ → ตั้งแพ็กเกจ + รอตรวจสอบ + เริ่มนับ 30 วัน
+      const expireDateObj = new Date();
+      expireDateObj.setDate(expireDateObj.getDate() + 30);
+
+      const payload = {
+        shop_name: name,
+        phone_number: phone,
+        package_name: selectedPlan,
+        subscription_status: 'pending',
+        expire_date: expireDateObj.toISOString(),
+      };
+
+      const res = existingStore
+        ? await supabase.from('stores').update(payload).eq('line_user_id', lineUserId)
+        : await supabase.from('stores').insert({ line_user_id: lineUserId, ...payload });
       error = res.error;
     }
 
     if (error) {
+      setSaving(false);
       alert('⚠️ เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
       console.error(error);
       return;
     }
 
-    // 🚀 ส่งแจ้งเตือนเข้า LINE แอดมินอัตโนมัติทันที
+    // 🚀 แจ้งเตือน LINE แอดมิน
     try {
       await fetch('/api/notify-line', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          shopName: shopName,
-          packageName: selectedPlan,
-          phone: shopPhone || 'ไม่ได้ระบุ'
-        })
+        body: JSON.stringify(
+          isNewRegistration
+            ? { type: 'new_registration', shopName: name, packageName: selectedPlan, phone: shopPhone || 'ไม่ได้ระบุ' }
+            : { type: 'shop_updated', oldShopName: oldName, shopName: name, phone: shopPhone || 'ไม่ได้ระบุ', status: storeInfo?.subscription_status }
+        ),
       });
     } catch (err) {
       console.error('Line notify error:', err);
     }
 
-    alert('ลงทะเบียนรับสิทธิ์เรียบร้อยแล้วครับ! รอแอดมินตรวจสอบและอนุมัติเปิดสิทธิ์ใช้งาน 🐾');
+    setSaving(false);
+    alert(
+      isNewRegistration
+        ? 'ลงทะเบียนรับสิทธิ์เรียบร้อยแล้วครับ! รอแอดมินตรวจสอบและอนุมัติ 🐾'
+        : 'แก้ไขข้อมูลร้านเรียบร้อยแล้วครับ ✅'
+    );
     window.location.reload();
   };
-  
+
   return (
     <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-8 font-sans pb-24">
-      
-      {/* Header */}
-      <div 
+
+       {/* Header */}
+      <div
         className="p-8 rounded-[2.5rem] shadow-sm border flex flex-col md:flex-row justify-between items-start md:items-center gap-6 text-slate-800 relative overflow-hidden"
-        style={{ backgroundColor: '#FBEDD6', borderColor: '#f3dcbc' }}
+         style={{ backgroundColor: '#FBEDD6', borderColor: '#f3dcbc' }}
       >
         <div className="absolute right-[-20px] bottom-[-20px] text-8xl opacity-10 pointer-events-none">
           🎁
         </div>
         <div className="flex items-center gap-4 relative z-10">
-          <div 
+          <div
             className="w-16 h-16 rounded-3xl border flex items-center justify-center text-3xl shadow-md bg-white"
             style={{ borderColor: '#e6ccab' }}
           >
@@ -189,8 +204,8 @@ export default function PricingPage() {
         </div>
       </div>
 
-      {/* 🌟 กล่องแสดงสถานะแพ็กเกจจาก Cloud DB จริง */}
-      {storeInfo && (
+      {/* 🌟 กล่องแสดงสถานะแพ็กเกจ (ขึ้นหลังกดยืนยันรับสิทธิ์เท่านั้น) */}
+      {hasRegistered && storeInfo && (
         <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border-2 border-amber-300 space-y-5" style={{ backgroundColor: '#FFFBEB' }}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-amber-200 pb-4">
             <div className="flex items-center gap-3">
@@ -202,8 +217,8 @@ export default function PricingPage() {
             </div>
             <div className="flex items-center gap-3">
               <span className={`text-xs font-black px-4 py-1.5 rounded-full shadow-2xs ${
-                storeInfo.subscription_status === 'active' 
-                  ? 'bg-emerald-600 text-white' 
+                storeInfo.subscription_status === 'active'
+                  ? 'bg-emerald-600 text-white'
                   : 'bg-amber-500 text-white animate-pulse'
               }`}>
                 {storeInfo.subscription_status === 'active' ? 'อนุมัติแล้ว ✅' : 'รอตรวจสอบ ⏳'}
@@ -241,7 +256,7 @@ export default function PricingPage() {
 
       {/* ส่วนเลือกแพ็กเกจทั้ง 3 ระดับ */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-        
+
         {/* 1. NJ Start */}
         <div className={`bg-white p-8 rounded-[2.5rem] shadow-sm border-2 flex flex-col justify-between space-y-6 transition ${
           selectedPlan.includes('NJ Start') ? 'border-[#BF7E46] ring-2 ring-[#BF7E46]/20 shadow-md' : 'border-slate-200/80'
@@ -257,18 +272,18 @@ export default function PricingPage() {
               <span className="text-xs text-slate-500 font-bold"> / เดือน</span>
             </div>
             <p className="text-xs text-slate-500 mb-6">สำหรับร้านค้าและเจ้าของกิจการที่เริ่มทำบัญชี</p>
-            
+
             <ul className="space-y-3 text-xs text-slate-700">
               <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> ใช้งานได้ 1–2 คน</li>
               <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> บันทึกรายรับ–รายจ่าย</li>
               <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> จัดการเงินสด / บัญชีธนาคาร</li>
-              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> ✓ บันทึกและแยกยอดเดลิเวอรี (Grab / LINE MAN / ShopeeFood)</li>
+              <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> บันทึกและแยกยอดเดลิเวอรี (Grab / LINE MAN / ShopeeFood)</li>
               <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> รายงานสรุปยอดขายและค่าใช้จ่าย</li>
               <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> ภาษี & VAT / ดาวน์โหลด Excel / ZIP</li>
               <li className="flex items-center gap-3 font-bold text-amber-700"><span className="text-amber-500 font-bold">✓</span> เข้าสู่ระบบด้วย LINE (พื้นฐาน)</li>
             </ul>
           </div>
-          
+
           <button
             type="button"
             onClick={() => {
@@ -303,7 +318,7 @@ export default function PricingPage() {
               <span className="text-xs text-slate-500 font-bold"> / เดือน</span>
             </div>
             <p className="text-xs text-slate-500 mb-6">สำหรับร้านที่มีพนักงานและต้องการระบบแจ้งเตือนผ่าน LINE</p>
-            
+
             <ul className="space-y-3 text-xs text-slate-700">
               <li className="flex items-center gap-3 font-bold text-slate-900"><span className="text-emerald-600">✓</span> ทุกฟีเจอร์ใน NJ Start ครบถ้วน</li>
               <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> ใช้งาน 3–4 คน (เพิ่มพนักงานได้ทันที)</li>
@@ -314,7 +329,7 @@ export default function PricingPage() {
               <li className="flex items-center gap-3"><span className="text-amber-500 font-bold">✓</span> Priority Support ดูแลเป็นพิเศษ</li>
             </ul>
           </div>
-          
+
           <button
             type="button"
             onClick={() => {
@@ -347,7 +362,7 @@ export default function PricingPage() {
               <span className="text-xs text-slate-500 font-bold"> / เดือน</span>
             </div>
             <p className="text-xs text-slate-500 mb-6">ระบบอัตโนมัติเต็มรูปแบบ รองรับหลายกิจการ</p>
-            
+
             <ul className="space-y-3 text-xs text-slate-600">
               <li className="flex items-center gap-3 font-bold text-slate-800"><span className="text-slate-500">✓</span> ทุกฟีเจอร์ใน NJ Plus</li>
               <li className="flex items-center gap-3"><span className="text-slate-500">✓</span> ใช้งานได้มากกว่า 4 คนขึ้นไป</li>
@@ -356,7 +371,7 @@ export default function PricingPage() {
               <li className="flex items-center gap-3"><span className="text-slate-500">✓</span> รายงานขั้นสูงและการสรุปยอดตามช่วงเวลา</li>
             </ul>
           </div>
-          
+
           <button
             type="button"
             disabled
@@ -387,7 +402,7 @@ export default function PricingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">ชื่อร้านค้าของคุณ</label>
-              <input 
+              <input
                 type="text"
                 required
                 value={shopName}
@@ -398,7 +413,7 @@ export default function PricingPage() {
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">เบอร์โทรศัพท์ติดต่อ</label>
-              <input 
+              <input
                 type="text"
                 maxLength={10}
                 value={shopPhone}
@@ -411,7 +426,7 @@ export default function PricingPage() {
 
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">แนบรูปภาพหน้าร้าน หรือโลโก้ (ถ้ามี)</label>
-            <input 
+            <input
               type="file"
               accept="image/*"
               onChange={handleImageChange}
@@ -427,10 +442,15 @@ export default function PricingPage() {
 
           <button
             type="submit"
-            className="w-full py-4 text-xs font-black uppercase tracking-wider rounded-2xl shadow-md transition hover:opacity-90 text-white cursor-pointer"
+            disabled={saving}
+            className="w-full py-4 text-xs font-black uppercase tracking-wider rounded-2xl shadow-md transition hover:opacity-90 text-white cursor-pointer disabled:opacity-50"
             style={{ backgroundColor: '#BF7E46' }}
           >
-            🎁 ยืนยันรับสิทธิ์ทดลองใช้ฟรี 1 เดือน ({selectedPlan.split(' ')[0]} {selectedPlan.split(' ')[1]})
+            {saving
+              ? 'กำลังบันทึก...'
+              : hasRegistered
+                ? '💾 บันทึกการแก้ไขชื่อร้าน'
+                : `🎁 ยืนยันรับสิทธิ์ทดลองใช้ฟรี 1 เดือน (${selectedPlan.split(' ')[0]} ${selectedPlan.split(' ')[1]})`}
           </button>
         </form>
       </div>
