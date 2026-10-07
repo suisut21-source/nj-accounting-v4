@@ -91,16 +91,17 @@ export default function PricingPage() {
     const expireDateObj = new Date();
     expireDateObj.setDate(expireDateObj.getDate() + 30);
 
+    // 🚀 ใช้ upsert เพื่อให้บันทึกข้อมูลได้ทันที แม้ในตารางจะยังไม่มีแถวข้อมูลอยู่ก็ตาม
     const { error } = await supabase
       .from('stores')
-      .update({
+      .upsert({
+        line_user_id: lineUserId,
         shop_name: shopName,
         phone_number: shopPhone ? shopPhone.replace(/\D/g, '') : null,
         package_name: selectedPlan,
         subscription_status: 'pending',
         expire_date: expireDateObj.toISOString()
-      })
-      .eq('line_user_id', lineUserId);
+      }, { onConflict: 'line_user_id' });
 
     if (error) {
       alert('⚠️ เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
@@ -108,7 +109,7 @@ export default function PricingPage() {
       return;
     }
 
-    // 🚀 ส่งแจ้งเตือนเข้า LINE แอดมินอัตโนมัติเมื่อลูกค้ากดสมัครจริง
+    // 🚀 ส่งแจ้งเตือนเข้า LINE แอดมินอัตโนมัติทันที
     try {
       await fetch('/api/notify-line', {
         method: 'POST',
