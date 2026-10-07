@@ -38,35 +38,34 @@ function LineCallbackContent() {
 
         const { lineUserId, displayName } = result;
 
+        // ใช้ maybeSingle: ถ้ายังไม่มีร้านจะได้ data = null โดยไม่เกิด error
         const { data: existingStore } = await supabase
           .from('stores')
           .select('*')
           .eq('line_user_id', lineUserId)
-          .single();
+          .maybeSingle();
 
         if (existingStore) {
           localStorage.setItem('nj_is_logged_in', 'true');
           localStorage.setItem('nj_line_user_id', lineUserId);
           localStorage.setItem('nj_shop_name', existingStore.shop_name || 'ร้านค้าของฉัน');
-          
+
           setStatusMessage('เข้าสู่ระบบสำเร็จ! กำลังพาไปหน้าเลือกแพ็กเกจ...');
           setTimeout(() => { window.location.href = '/pricing'; }, 1000);
 
         } else {
-          const trialExpireDate = new Date();
-          trialExpireDate.setDate(trialExpireDate.getDate() + 30);
-
           const storeName = displayName ? 'ร้านของ ' + displayName : 'ร้านค้าของฉัน';
 
+          // สร้างแถวร้านแค่ตัวตน + ชื่อเริ่มต้น
+          // ยังไม่ใส่ package_name / expire_date เพราะลูกค้ายังไม่ได้เลือกแพ็กเกจ
+          // (จะถูกตั้งค่าเมื่อลูกค้ากด "ยืนยันรับสิทธิ์ทดลองใช้ฟรี" ในหน้า /pricing)
           const { error: insertError } = await supabase
             .from('stores')
             .insert([
               {
                 line_user_id: lineUserId,
                 shop_name: storeName,
-                subscription_status: 'pending',
-                package_name: 'ทดลองใช้ฟรี 30 วัน',
-                expire_date: trialExpireDate.toISOString()
+                subscription_status: 'new',
               }
             ]);
 
