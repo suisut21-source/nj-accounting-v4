@@ -425,7 +425,41 @@ export default function PricingPage() {
           </div>
         </div>
       </div>
-
+{/* 🧪 ปุ่มทดสอบยิง LINE Notify ด่วน */}
+      <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-emerald-200 text-center space-y-4">
+        <h3 className="font-black text-sm text-slate-900 flex items-center justify-center gap-2">
+          <span>🧪</span> ทดสอบระบบแจ้งเตือน LINE ด่วน
+        </h3>
+        <p className="text-xs text-slate-500">คลิกปุ่มด้านล่างเพื่อทดสอบส่งข้อความแจ้งเตือนเข้า LINE แอดมินทันที</p>
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              const res = await fetch('/api/notify-line', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  shopName: shopName || 'ร้านทดสอบ NJ',
+                  packageName: selectedPlan,
+                  phone: shopPhone || '0812345678'
+                })
+              });
+              const result = await res.json();
+              if (result.success) {
+                alert('🎉 ส่งข้อความทดสอบเข้า LINE สำเร็จแล้ว! ลองเช็คมือถือดูครับ');
+              } else {
+                alert('⚠️ ส่งไม่สำเร็จ: ' + JSON.stringify(result));
+              }
+            } catch (err) {
+              console.error(err);
+              alert('❌ เกิดข้อผิดพลาดในการเชื่อมต่อ API');
+            }
+          }}
+          className="w-full sm:w-auto px-8 py-4 text-xs font-black uppercase tracking-wider rounded-2xl shadow-md transition hover:bg-emerald-700 text-white cursor-pointer bg-emerald-600"
+        >
+          🚀 กดทดสอบยิง LINE Notify เดี๋ยวนี้!
+        </button>
+      </div>
       {/* Support Contact */}
       <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-200/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
