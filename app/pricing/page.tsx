@@ -108,6 +108,21 @@ export default function PricingPage() {
       return;
     }
 
+    // 🚀 เพิ่มโค้ดส่วนนี้เพื่อส่งแจ้งเตือนเข้า LINE แอดมินอัตโนมัติ
+    try {
+      await fetch('/api/notify-line', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shopName: shopName,
+          packageName: selectedPlan,
+          phone: shopPhone || 'ไม่ได้ระบุ'
+        })
+      });
+    } catch (err) {
+      console.error('Line notify error:', err);
+    }
+
     alert('ลงทะเบียนรับสิทธิ์เรียบร้อยแล้วครับ! รอแอดมินตรวจสอบและอนุมัติเปิดสิทธิ์ใช้งาน 🐾');
     window.location.reload();
   };
