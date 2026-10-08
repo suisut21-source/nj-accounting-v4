@@ -18,8 +18,9 @@ export default function Sidebar() {
   // 🔒 เช็กสถานะการอนุมัติจาก Supabase แบบเรียลไทม์ผ่าน LINE User ID
   useEffect(() => {
     const checkStoreStatus = async () => {
-      // ถ้าอยู่หน้า auth หรือหน้า pricing อยู่แล้ว ไม่ต้องเช็กวนลูปซ้ำ
-      if (pathname === '/auth' || pathname === '/pricing') return;
+      // ถ้าอยู่หน้า auth, pricing หรือหน้าแอดมิน ไม่ต้องเช็กสิทธิ์ของผู้ใช้ที่ล็อกอินอยู่
+      // (หน้าแอดมินต้องเปิดได้แม้บัญชี LINE ที่ใช้อยู่จะยังไม่ได้รับอนุมัติ ไม่งั้นจะถูกเด้งไป /pricing ก่อนกดอนุมัติ)
+      if (pathname === '/auth' || pathname === '/pricing' || pathname?.startsWith('/admin')) return;
 
       const lineUserId = localStorage.getItem('nj_line_user_id');
       if (!lineUserId) {
