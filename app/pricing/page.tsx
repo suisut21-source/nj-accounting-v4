@@ -356,8 +356,7 @@ export default function PricingPage() {
                 <FiZap className="text-amber-600 shrink-0 text-base" /> รับสรุปยอดและแจ้งเตือนผ่าน LINE อัตโนมัติ
               </li>
               <li className="flex items-center gap-3"><span className="text-emerald-600 font-bold">✓</span> รายงานและข้อมูลเชิงลึกสำหรับเจ้าของร้าน</li>
-              <li className="flex items-center gap-3"><span className="text-amber-500 font-bold">✓</span> Priority Support ดูแลเป็นพิเศษ</li>
-            </ul>
+              
           </div>
 
           <button
